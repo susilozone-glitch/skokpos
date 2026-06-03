@@ -5,7 +5,7 @@
 
 | | |
 |---|---|
-| **Versi Dokumen** | 3.1 |
+| **Versi Dokumen** | 3.2 |
 | **Tanggal** | 3 Juni 2026 |
 | **Disiapkan Untuk** | Susilogiono |
 | **Nama Proyek** | SkokPOS |
@@ -41,7 +41,7 @@ Aplikasi dibangun dengan arsitektur **mobile-first** dan **offline-first**, mema
 | 4 | Mendukung cetak struk thermal langsung dari browser |
 | 5 | Memberikan laporan bisnis yang actionable melalui dashboard analitik |
 | 6 | Mendukung operasional multi-outlet dari satu platform |
-| 7 | Menjamin keamanan operasional melalui kontrol akses berbasis peran (5 role) |
+| 7 | Menjamin keamanan operasional melalui kontrol akses berbasis peran (6 role) |
 | 8 | Menyediakan alat loyalitas dan retensi pelanggan |
 | 9 | Mendukung manajemen vendor dan purchase order |
 | 10 | Mendukung dua bahasa: Bahasa Indonesia (default) dan English |
@@ -64,7 +64,20 @@ Proyek ini dibagi menjadi **6 fase** dengan deliverables sebagai berikut:
 |---|---|---|
 | 1.1 | Inisialisasi Proyek | Proyek **Ionic 8 + React + Capacitor 6** dengan konfigurasi TypeScript-ready |
 | 1.2 | Konfigurasi PWA & Native | PWA built-in Ionic, Capacitor untuk native build Android & iOS, Service Worker untuk offline caching |
-| 1.3 | Sistem Desain (Tailwind CSS v4) | Design token berbasis CSS Variables (warna, tipografi, spacing, shadow, animasi) dengan dukungan tema terang dan gelap |
+| 1.3 | Sistem Desain (Tailwind CSS v4) | Design token berbasis CSS Variables (warna, tipografi, spacing, shadow, animasi) dengan dukungan tema terang dan gelap. **Tema Warna Indigo Blue** — lihat tabel warna di bawah |
+
+**Tema Warna:**
+
+| Element | Light Mode | Dark Mode |
+|---|---|---|
+| Primary | Indigo #4F46E5 | Indigo #6366F1 |
+| Background | #FFFFFF | #0F172A |
+| Surface/Card | #F8FAFC | #1E293B |
+| Sidebar | #1E1B4B (Indigo 950) | #0F0D2E |
+| Text | #1E293B | #F1F5F9 |
+| Success (Bayar) | #059669 | #10B981 |
+| Warning | #D97706 | #F59E0B |
+| Danger (Batal) | #DC2626 | #EF4444 |
 | 1.4 | Komponen UI (Ionic Components) | 100+ komponen UI native-like built-in: IonModal, IonActionSheet, IonToast, IonTabs, IonList, IonRefresher, IonSliding, dll. |
 | 1.5 | Shell Aplikasi | Layout responsif dengan sidebar collapsible (desktop/tablet), navigasi bawah (mobile), header dengan search & notifikasi |
 | 1.6 | Firebase Setup | Pembuatan proyek Firebase baru, Firestore dengan offline persistence, Authentication, Realtime Database, Cloud Storage |
@@ -408,44 +421,54 @@ Suite laporan komprehensif dengan 18 kategori:
 | # | Deliverable | Deskripsi |
 |---|---|---|
 | 5G.1 | Direktori Karyawan | Daftar karyawan dengan role, status, dan informasi kontak |
-| 5G.2 | Kontrol Akses Berbasis Peran | Lima peran dengan hak akses berbeda (lihat matriks di bawah) |
+| 5G.2 | Kontrol Akses Berbasis Peran | Enam peran dengan hak akses berbeda (lihat matriks di bawah) |
 | 5G.3 | Login PIN Cepat | PIN 4-6 digit untuk pergantian staf cepat di terminal POS |
 | 5G.4 | Performa Karyawan | Tracking penjualan per staf dan jumlah transaksi |
 | 5G.5 | Absensi Masuk/Keluar | Tracking waktu shift dengan log jam kerja harian |
+| 5G.6 | **Role: Gudang / Warehouse** | Staff khusus gudang: terima barang, stock opname, kelola inventaris, lihat vendor & PO (read-only). Tidak ada akses checkout, laporan, atau settings |
+| 5G.7 | **Approval Chain (Rantai Persetujuan)** | PIN verification untuk aksi kritis: diskon >10% perlu approve Admin, void/retur perlu approve Admin/Super Admin, buka laci kas manual perlu PIN admin, hapus produk hanya Super Admin |
+| 5G.8 | **Session & Security** | Auto-logout setelah X menit tidak aktif (konfigurabel), 1 akun = 1 device (concurrent limit), login history, 5× salah PIN = lock 15 menit, force logout remote |
+| 5G.9 | **Kasir Sub-Permissions** | Level Senior/Junior per kasir: Senior bisa beri diskon ≤10%, retur (dengan approve), buka laci manual. Junior perlu approve untuk semua aksi sensitif |
+| 5G.10 | **Staff Profile & Schedule** | Foto profil staff, jadwal kerja (pagi/siang/malam), hari libur, status aktif/non-aktif, riwayat kinerja |
+| 5G.11 | **Serah Terima Shift (Handover)** | Transfer shift tanpa tutup toko, hitung kas bersama, catatan serah terima, log handover di activity log |
+| 5G.12 | **Staff Performance Dashboard** | Revenue per kasir (ranking), transaksi per shift, AOV per kasir, void/retur rate, kecepatan checkout, delivery per driver |
+| 5G.13 | **Custom Role Builder** | Super Admin buat role custom, checklist permissions, clone role existing, role berbeda per outlet |
+| 5G.14 | **Time-Based Access** | Jam kerja per staff (08:00-16:00), akses weekend, holiday block |
+| 5G.15 | **Role-Based Notifications** | Super Admin: semua alerts. Admin: stok rendah, PO, shift. Kasir: order delivery, shift reminder. Dapur: order baru. Driver: assignment |
 
 **Hierarki Peran & Matriks Hak Akses:**
 
-| Fitur | 🔑 Super Admin | 👔 Admin | 💳 Kasir | 🍳 Dapur | 🚚 Driver |
-|---|:---:|:---:|:---:|:---:|:---:|
-| Ganti kategori toko | ✅ | ❌ | ❌ | ❌ | ❌ |
-| Kelola outlet | ✅ | ❌ | ❌ | ❌ | ❌ |
-| Ubah tarif pajak | ✅ | ❌ | ❌ | ❌ | ❌ |
-| Kelola staff & roles | ✅ | ❌ | ❌ | ❌ | ❌ |
-| Kelola modul (show/hide) | ✅ | ❌ | ❌ | ❌ | ❌ |
-| Hapus data / reset | ✅ | ❌ | ❌ | ❌ | ❌ |
-| Backup / restore | ✅ | ❌ | ❌ | ❌ | ❌ |
-| Lihat laporan | ✅ | ✅ | ❌ | ❌ | ❌ |
-| Kelola inventaris | ✅ | ✅ | ❌ | ❌ | ❌ |
-| Kelola vendor | ✅ | ✅ | ❌ | ❌ | ❌ |
-| Buat & kelola PO | ✅ | ✅ | ❌ | ❌ | ❌ |
-| Terima barang | ✅ | ✅ | ❌ | ❌ | ❌ |
-| Stok opname | ✅ | ✅ | ❌ | ❌ | ❌ |
-| Activity log | ✅ | ✅ | ❌ | ❌ | ❌ |
-| Approve void/retur | ✅ | ✅ | ❌ | ❌ | ❌ |
-| Set batas kredit | ✅ | ❌ | ❌ | ❌ | ❌ |
-| Kelola pelanggan | ✅ | ✅ | ✅ | ❌ | ❌ |
-| Checkout / POS | ✅ | ❌ | ✅ | ❌ | ❌ |
-| Buka/tutup shift | ✅ | ❌ | ✅ | ❌ | ❌ |
-| Proses retur | ✅ | ✅ | ✅ | ❌ | ❌ |
-| Jual bon/hutang | ✅ | ❌ | ✅ | ❌ | ❌ |
-| Kitchen Display | ✅ | ❌ | ❌ | ✅ | ❌ |
-| Delivery Board | ✅ | ✅ | ✅ | ❌ | ❌ |
-| Driver View | ❌ | ❌ | ❌ | ❌ | ✅ |
-| Printer & struk | ✅ | ✅ | ❌ | ❌ | ❌ |
-| Atur ongkir & zona | ✅ | ✅ | ❌ | ❌ | ❌ |
-| Lihat bukti kirim | ✅ | ✅ | ✅ | ❌ | ❌ |
-| Setor kas COD | ❌ | ❌ | ❌ | ❌ | ✅ |
-| Tema & bahasa | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Fitur | 🔑 Super Admin | 👔 Admin | 💳 Kasir | 🍳 Dapur | 🚚 Driver | 📦 Gudang |
+|---|:---:|:---:|:---:|:---:|:---:|:---:|
+| Ganti kategori toko | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| Kelola outlet | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| Ubah tarif pajak | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| Kelola staff & roles | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| Kelola modul (show/hide) | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| Hapus data / reset | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| Backup / restore | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| Lihat laporan | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ |
+| Kelola inventaris | ✅ | ✅ | ❌ | ❌ | ❌ | ✅ (read) |
+| Kelola vendor | ✅ | ✅ | ❌ | ❌ | ❌ | ✅ (read) |
+| Buat & kelola PO | ✅ | ✅ | ❌ | ❌ | ❌ | ✅ (read) |
+| Terima barang | ✅ | ✅ | ❌ | ❌ | ❌ | ✅ |
+| Stok opname | ✅ | ✅ | ❌ | ❌ | ❌ | ✅ |
+| Activity log | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ |
+| Approve void/retur | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ |
+| Set batas kredit | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| Kelola pelanggan | ✅ | ✅ | ✅ | ❌ | ❌ | ❌ |
+| Checkout / POS | ✅ | ❌ | ✅ | ❌ | ❌ | ❌ |
+| Buka/tutup shift | ✅ | ❌ | ✅ | ❌ | ❌ | ❌ |
+| Proses retur | ✅ | ✅ | ✅ | ❌ | ❌ | ❌ |
+| Jual bon/hutang | ✅ | ❌ | ✅ | ❌ | ❌ | ❌ |
+| Kitchen Display | ✅ | ❌ | ❌ | ✅ | ❌ | ❌ |
+| Delivery Board | ✅ | ✅ | ✅ | ❌ | ❌ | ❌ |
+| Driver View | ❌ | ❌ | ❌ | ❌ | ✅ | ❌ |
+| Printer & struk | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ |
+| Atur ongkir & zona | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ |
+| Lihat bukti kirim | ✅ | ✅ | ✅ | ❌ | ❌ | ❌ |
+| Setor kas COD | ❌ | ❌ | ❌ | ❌ | ✅ | ❌ |
+| Tema & bahasa | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 
 > [!NOTE]
 > **Super Admin** otomatis dibuat saat seseorang menyelesaikan Setup Wizard pertama kali.
@@ -691,7 +714,7 @@ Proyek dianggap selesai ketika:
 4. ✅ Struk thermal tercetak dengan benar pada printer ESC/POS compatible
 5. ✅ Pelacakan pengiriman menampilkan lokasi driver live di peta
 6. ✅ Laporan menampilkan data akurat sesuai catatan transaksi
-7. ✅ Kontrol akses berbasis peran (5 role) membatasi fitur per peran dengan benar
+7. ✅ Kontrol akses berbasis peran (6 role) membatasi fitur per peran dengan benar
 8. ✅ Isolasi data multi-outlet berfungsi dengan benar
 9. ✅ Skor Lighthouse PWA ≥ 90
 10. ✅ App berfungsi dalam Bahasa Indonesia dengan switch bahasa ke English
@@ -723,6 +746,10 @@ Proyek dianggap selesai ketika:
 36. ✅ Laporan perbandingan antar periode dan outlet berfungsi
 37. ✅ Laporan kerugian (shrinkage) menghitung total loss
 38. ✅ Smart alerts mengirim notifikasi otomatis ke owner
+39. ✅ Role Gudang berfungsi dengan permission yang benar
+40. ✅ Approval chain memerlukan PIN untuk aksi sensitif
+41. ✅ Auto-logout dan session security berfungsi
+42. ✅ Tema warna Indigo Blue diterapkan konsisten di light & dark mode
 
 ### 7.2 Tanda Tangan Persetujuan
 
@@ -744,5 +771,5 @@ Setiap perubahan terhadap ruang lingkup yang didefinisikan dalam SOW ini harus d
 ---
 
 *Dokumen dibuat pada 3 Juni 2026*
-*SkokPOS v3.1 — Kerangka Acuan Kerja / Statement of Work*
+*SkokPOS v3.2 — Kerangka Acuan Kerja / Statement of Work*
 

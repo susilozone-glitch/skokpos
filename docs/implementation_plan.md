@@ -345,14 +345,85 @@ function CartPanel() {
 - Instant switch — no page reload needed
 - Saved per user preference in local storage
 
-#### [NEW] `src/styles/globals.css` — Design System (Tailwind CSS v4)
-Tailwind-based design system with CSS custom properties for theming:
-- **CSS Variables**: HSL color tokens for light/dark themes via `@theme`
-- **Color Palette**: Professional indigo-blue primary, warm accents, semantic colors
-- **Typography**: Inter font from Google Fonts via `@import`
-- **Dark Mode**: `class` strategy — toggle via `dark:` prefix
-- **Animations**: Custom keyframes for skeleton loading, slide-in, fade, pulse
-- **Responsive**: Mobile-first with Tailwind breakpoints (`sm:`, `md:`, `lg:`, `xl:`)
+#### [NEW] `src/theme/variables.css` — Design System & Color Theme
+
+**🎨 Color Theme: Indigo Blue**
+
+Ionic CSS variables + Tailwind custom theme:
+
+**Primary Palette (Indigo):**
+
+| Shade | Hex | Usage |
+|---|---|---|
+| 50 | `#EEF2FF` | Backgrounds, hover states |
+| 100 | `#E0E7FF` | Selected item background |
+| 200 | `#C7D2FE` | Borders, dividers |
+| 300 | `#A5B4FC` | Disabled state |
+| 400 | `#818CF8` | Icons, links |
+| 500 | `#6366F1` | Secondary buttons |
+| **600** | **`#4F46E5`** | **← PRIMARY** |
+| 700 | `#4338CA` | Hover on primary |
+| 800 | `#3730A3` | Active/pressed |
+| 900 | `#312E81` | Text on light bg |
+| 950 | `#1E1B4B` | Sidebar background |
+
+**Light & Dark Theme:**
+
+| Element | Light Mode | Dark Mode |
+|---|---|---|
+| Background | `#FFFFFF` | `#0F172A` (Slate 900) |
+| Surface/Card | `#F8FAFC` (Slate 50) | `#1E293B` (Slate 800) |
+| Sidebar | `#1E1B4B` (Indigo 950) | `#0F0D2E` |
+| Text Primary | `#1E293B` (Slate 800) | `#F1F5F9` (Slate 100) |
+| Text Secondary | `#64748B` (Slate 500) | `#94A3B8` (Slate 400) |
+| Border | `#E2E8F0` (Slate 200) | `#334155` (Slate 700) |
+| Primary Button | `#4F46E5` text white | `#6366F1` text white |
+
+**Semantic Colors:**
+
+| Purpose | Color | Hex | Usage |
+|---|---|---|---|
+| ✅ Success | Emerald | `#059669` | Bayar, Lunas, Stock OK |
+| ⚠️ Warning | Amber | `#D97706` | Stok rendah, Hold order |
+| 🔴 Danger | Red | `#DC2626` | Batal, Void, Error |
+| ℹ️ Info | Blue | `#2563EB` | Notifikasi, Info |
+
+**POS-Specific Badge Colors:**
+
+| Badge | Color | Hex |
+|---|---|---|
+| 🟢 Bayar / Lunas | Green | `#059669` |
+| 🔴 Batal / Void | Red | `#DC2626` |
+| 🟡 Hold / Pending | Amber | `#D97706` |
+| 🔵 QRIS | Primary | `#4F46E5` |
+| 🟠 COD | Orange | `#EA580C` |
+| 🟣 DP (Uang Muka) | Purple | `#7C3AED` |
+| 🩵 Transfer Bank | Teal | `#0D9488` |
+
+**Ionic CSS Variables:**
+```css
+:root {
+  --ion-color-primary: #4F46E5;
+  --ion-color-primary-shade: #4338CA;
+  --ion-color-primary-tint: #6366F1;
+  --ion-color-success: #059669;
+  --ion-color-warning: #D97706;
+  --ion-color-danger: #DC2626;
+  --ion-background-color: #FFFFFF;
+  --ion-text-color: #1E293B;
+}
+
+.dark {
+  --ion-background-color: #0F172A;
+  --ion-text-color: #F1F5F9;
+  --ion-color-primary: #6366F1;
+}
+```
+
+**Typography**: Inter font from Google Fonts
+**Dark Mode**: `class` strategy — toggle via Ionic `ion-palette-dark`
+**Animations**: Custom keyframes for skeleton loading, slide-in, fade, pulse
+**Responsive**: Mobile-first with Tailwind breakpoints (`sm:`, `md:`, `lg:`, `xl:`)
 
 #### [NEW] Ionic UI Components (Built-in)
 No separate installation needed — all included in `@ionic/react`:
@@ -1165,10 +1236,11 @@ Simple forecasting berdasarkan data historis:
 #### [NEW] `src/app/(admin)/staff/page.jsx` — Staff Management
 - Staff list with roles and status
 - Add/edit staff with role assignment
-- Role-based access control (5 roles):
+- Role-based access control (**6 roles**):
   - **🔑 Super Admin**: Full access — store mode, outlet management, tax settings, staff roles, data reset. Created automatically during Setup Wizard.
   - **👔 Admin**: Reports, inventory, customers, staff list (cannot change store mode, outlets, or tax)
-  - **💳 Kasir (Cashier)**: POS checkout, order management, customer lookup
+  - **💳 Kasir (Cashier)**: POS checkout, order management, customer lookup. **Sub-level: Senior / Junior**
+  - **📦 Gudang (Warehouse)**: Terima barang, stock opname, kelola inventaris. No checkout, no reports, no settings
   - **🍳 Dapur (Kitchen)**: Kitchen display, order status updates (🍽️ Restaurant only)
   - **🚚 Driver**: Delivery view, GPS tracking
 - PIN-based quick login (for shift changes at POS terminal)
@@ -1176,27 +1248,131 @@ Simple forecasting berdasarkan data historis:
 
 **Role Permission Matrix**:
 
-| Feature | 🔑 Super Admin | 👔 Admin | 💳 Kasir | 🍳 Dapur | 🚚 Driver |
-|---|:---:|:---:|:---:|:---:|:---:|
-| Ganti kategori toko | ✅ | ❌ | ❌ | ❌ | ❌ |
-| Kelola outlet | ✅ | ❌ | ❌ | ❌ | ❌ |
-| Ubah tarif pajak | ✅ | ❌ | ❌ | ❌ | ❌ |
-| Kelola staff & roles | ✅ | ❌ | ❌ | ❌ | ❌ |
-| Hapus data / reset | ✅ | ❌ | ❌ | ❌ | ❌ |
-| Backup / restore | ✅ | ❌ | ❌ | ❌ | ❌ |
-| Lihat laporan | ✅ | ✅ | ❌ | ❌ | ❌ |
-| Kelola inventaris | ✅ | ✅ | ❌ | ❌ | ❌ |
-| **Kelola vendor** | ✅ | ✅ | ❌ | ❌ | ❌ |
-| **Buat & kelola PO** | ✅ | ✅ | ❌ | ❌ | ❌ |
-| **Terima barang (receiving)** | ✅ | ✅ | ❌ | ❌ | ❌ |
-| **Stock opname** | ✅ | ✅ | ❌ | ❌ | ❌ |
-| Kelola pelanggan | ✅ | ✅ | ✅ | ❌ | ❌ |
-| Checkout / POS | ✅ | ❌ | ✅ | ❌ | ❌ |
-| Kitchen Display | ✅ | ❌ | ❌ | ✅ | ❌ |
-| Delivery Board | ✅ | ✅ | ✅ | ❌ | ❌ |
-| Driver View | ❌ | ❌ | ❌ | ❌ | ✅ |
-| Printer & receipt settings | ✅ | ✅ | ❌ | ❌ | ❌ |
-| Theme & language | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Feature | 🔑 Super Admin | 👔 Admin | 💳 Kasir | 📦 Gudang | 🍳 Dapur | 🚚 Driver |
+|---|:---:|:---:|:---:|:---:|:---:|:---:|
+| Ganti kategori toko | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| Kelola outlet | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| Ubah tarif pajak | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| Kelola staff & roles | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| Hapus data / reset | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| Backup / restore | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| Buat role custom | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| Lihat laporan | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ |
+| Kelola inventaris | ✅ | ✅ | ❌ | ✅ | ❌ | ❌ |
+| **Kelola vendor** | ✅ | ✅ | ❌ | 👁️ Read | ❌ | ❌ |
+| **Buat & kelola PO** | ✅ | ✅ | ❌ | 👁️ Read | ❌ | ❌ |
+| **Terima barang (receiving)** | ✅ | ✅ | ❌ | ✅ | ❌ | ❌ |
+| **Stock opname** | ✅ | ✅ | ❌ | ✅ | ❌ | ❌ |
+| Kelola pelanggan | ✅ | ✅ | ✅ | ❌ | ❌ | ❌ |
+| Checkout / POS | ✅ | ❌ | ✅ | ❌ | ❌ | ❌ |
+| Kitchen Display | ✅ | ❌ | ❌ | ❌ | ✅ | ❌ |
+| Delivery Board | ✅ | ✅ | ✅ | ❌ | ❌ | ❌ |
+| Driver View | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ |
+| Printer & receipt settings | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ |
+| Theme & language | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+
+#### [NEW] Approval Chain (Rantai Persetujuan)
+PIN verification untuk aksi sensitif:
+
+| Action | Kasir Langsung? | Perlu Approve | Approver |
+|---|---|---|---|
+| Diskon ≤ 10% | ✅ (Senior only) | ❌ | — |
+| Diskon > 10% | ❌ | ✅ PIN | Admin / Super Admin |
+| Diskon > 25% | ❌ | ✅ PIN | Super Admin only |
+| Void transaksi | ❌ | ✅ PIN | Admin / Super Admin |
+| Retur / refund | ❌ | ✅ PIN | Admin / Super Admin |
+| Buka laci kas manual | ❌ | ✅ PIN | Admin / Super Admin |
+| Ubah harga produk | ❌ | ✅ PIN | Admin / Super Admin |
+| Hapus produk | ❌ | ✅ PIN | Super Admin only |
+| Cancel order setelah print | ❌ | ✅ PIN | Admin / Super Admin |
+
+```
+Flow: Kasir tap "Void" → IonModal "Masukkan PIN Admin"
+      → Admin input PIN → Approved → Void tercatat di activity log
+      → Log: "Void oleh Kasir Ani, disetujui oleh Admin Budi"
+```
+
+#### [NEW] Session & Security
+| Feature | Description |
+|---|---|
+| Auto-logout | Logout otomatis setelah X menit tidak aktif (konfigurabel: 15/30/60 min) |
+| Concurrent Session Limit | 1 akun hanya bisa login di 1 device (cegah sharing PIN) |
+| Login History | Log: siapa login, kapan, dari device apa |
+| Failed Login Lock | 5× salah PIN → akun terkunci 15 menit |
+| Force Logout | Super Admin bisa paksa logout staff dari remote |
+| Device Binding | Opsional: kasir hanya bisa login dari device tertentu |
+| Password Policy | PIN minimal 4 digit, Super Admin minimal 6 digit |
+
+#### [NEW] Kasir Sub-Permissions (Senior / Junior)
+Tidak semua kasir sama — configurable per staff:
+
+| Permission | 💳 Kasir Senior | 💳 Kasir Junior |
+|---|:---:|:---:|
+| Checkout | ✅ | ✅ |
+| Berikan diskon ≤ 10% | ✅ | ❌ (perlu approve) |
+| Hold order | ✅ | ✅ |
+| Retur (dengan approve) | ✅ | ❌ |
+| Lihat pelanggan | ✅ | ✅ |
+| Buka laci kas manual | ✅ (PIN sendiri) | ❌ |
+| Lihat laporan shift sendiri | ✅ | ❌ |
+| Ubah jumlah item setelah print | ✅ (PIN) | ❌ |
+
+Implementasi: Tambahkan field `permissionLevel: 'senior' | 'junior'` di staff model.
+
+#### [NEW] Staff Profile & Schedule
+| Feature | Description |
+|---|---|
+| Foto Profil | Upload foto staff (tampil di header & activity log) |
+| Jadwal Kerja | Tentukan shift per staff (pagi 06-14 / siang 14-22 / malam 22-06) |
+| Hari Libur | Tandai hari libur per staff |
+| Status Aktif/Non-aktif | Non-aktifkan akun tanpa hapus (cuti, resign) |
+| Riwayat Kinerja | Ringkasan: total transaksi, revenue dihasilkan, rata-rata per transaksi |
+
+#### [NEW] Serah Terima Shift (Shift Handover)
+| Feature | Description |
+|---|---|
+| Transfer Shift | Kasir A serah terima ke Kasir B tanpa tutup toko |
+| Hitung Kas Bersama | Kas dihitung oleh Kasir outgoing & incoming, keduanya confirm |
+| Catatan Serah Terima | "Ada 2 retur pending, 1 COD belum setor" |
+| Log Handover | Tercatat di activity log: siapa → siapa, waktu, selisih kas |
+
+#### [NEW] Staff Performance Dashboard
+| Metric | Visual |
+|---|---|
+| Revenue per Kasir | Bar chart ranking |
+| Transaksi per Shift | Counter per shift |
+| Average Order Value | AOV per kasir |
+| Void/Retur Rate | % per kasir (🔴 jika > 5%) |
+| Kecepatan Checkout | Rata-rata waktu scan → bayar |
+| Delivery per Driver | Jumlah & waktu rata-rata |
+| Rating Driver | Sukses/Gagal delivery ratio |
+
+#### [NEW] Custom Role Builder (🔑 Super Admin Only)
+| Feature | Description |
+|---|---|
+| Buat Role Baru | Nama role custom (misal: "Supervisor", "Pramuniaga") |
+| Pilih Permissions | Checklist granular permissions |
+| Clone Role | Duplikat role existing → modifikasi |
+| Per-outlet Role | Role berbeda per outlet |
+| Max 10 custom roles | Batas agar tidak terlalu kompleks |
+
+#### [NEW] Time-Based Access
+| Feature | Description |
+|---|---|
+| Jam Kerja | Kasir A hanya bisa login 08:00-16:00 |
+| Akses Weekend | Staff tertentu hanya boleh akses di hari kerja |
+| Holiday Block | Block login pada tanggal tertentu |
+| Overtime Alert | Notifikasi jika staff login di luar jadwal |
+
+#### [NEW] Role-Based Notifications
+| Role | Notifikasi Yang Diterima |
+|---|---|
+| 🔑 Super Admin | Semua alerts + revenue reports + security alerts |
+| 👔 Admin | Stok rendah, PO, shift variance, expiry, void/retur alerts |
+| 💳 Kasir | Order delivery baru, shift reminder, target reminder |
+| 📦 Gudang | Barang datang, PO approved, stock opname reminder |
+| 🍳 Dapur | Order baru, modifier note, rush order |
+| 🚚 Driver | Delivery assignment, route update, COD reminder |
 
 #### [NEW] `src/app/(admin)/customers/page.jsx` — Customer Database
 - Customer list with search
@@ -1505,3 +1681,14 @@ skokpos/
 61. ✅ **Owner Mobile Dashboard**: Quick stats, push notifications, sparkline charts
 62. ✅ **Forecasting**: Predict revenue, stock depletion, peak hours/days
 63. ✅ **Export Enhanced**: PDF branded, Google Sheets, email, A4 print, share image
+64. ✅ **Gudang / Warehouse Role**: Dedicated warehouse staff with inventory-only access
+65. ✅ **Approval Chain**: PIN verification for void, discount >10%, refund, manual cash drawer
+66. ✅ **Session Security**: Auto-logout, concurrent limit, login lock after 5 failed attempts
+67. ✅ **Kasir Sub-Permissions**: Senior vs Junior cashier permission levels
+68. ✅ **Staff Profile & Schedule**: Photo, work schedule, active/inactive status
+69. ✅ **Shift Handover**: Transfer shift between cashiers with joint cash count
+70. ✅ **Staff Performance**: Revenue ranking, void rate, checkout speed per cashier
+71. ✅ **Custom Role Builder**: Create custom roles with granular permissions
+72. ✅ **Time-Based Access**: Restrict login to work hours, weekend, holidays
+73. ✅ **Role-Based Notifications**: Each role gets relevant alerts only
+74. ✅ **Indigo Blue Theme**: Professional color system with full light/dark mode
