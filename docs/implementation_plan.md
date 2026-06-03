@@ -61,7 +61,12 @@ graph TB
 | **State** | Zustand + React Query | Lightweight, offline-friendly |
 | **Database** | Firebase Firestore | Real-time sync, offline persistence |
 | **GPS Tracking** | Firebase Realtime DB + **@capacitor/geolocation** | Background GPS for driver tracking |
-| **Auth** | Firebase Auth | Role-based access (Super Admin/Admin/Cashier/Kitchen/Driver) |
+| **Auth** | Firebase Auth | Role-based access (Super Admin/Admin/Kasir/Gudang/Dapur/Driver) |
+| **AI** | Firebase AI Logic (Gemini 2.5 Flash) | Product image generation, auto-suggest fields |
+| **Serverless** | Firebase Cloud Functions | Payment webhooks, scheduled tasks, notifications |
+| **Storage** | Firebase Cloud Storage | Product images, logos, POD photos |
+| **Push Notifications** | Firebase Cloud Messaging (FCM) | Smart alerts, order updates |
+| **Security** | Firebase App Check | AI endpoint protection, API security |
 | **Maps** | Leaflet + OpenStreetMap | Free, no API key needed |
 | **Charts** | Recharts | Flexible chart components |
 | **Printing** | ESC/POS via **Capacitor BLE / WebUSB** | Thermal printer: Bluetooth + USB |
@@ -157,7 +162,7 @@ flowchart TD
 ### Architecture: How Mode Switching Works
 
 ```javascript
-// src/stores/settingsStore.js
+// src/stores/settingsStore.ts
 const STORE_MODES = {
   RETAIL: 'retail',      // Warung, minimarket, toko
   RESTAURANT: 'restaurant' // Restoran, café, rumah makan
@@ -183,23 +188,23 @@ const getModeFeatures = (mode) => ({
 ### Phase 1: Project Foundation, Design System & Setup Wizard
 
 #### [NEW] Project Setup
-- Initialize Next.js 15 project with App Router
-- Configure PWA with `next-pwa` (Service Worker, manifest.json)
+- Initialize Ionic 8 + React + Capacitor 6 project with TypeScript + Vite
+- Configure PWA with Vite PWA plugin + Capacitor for native builds (Android APK, iOS IPA)
 - **Install & configure Tailwind CSS v4**
-- **Initialize Shadcn/ui** (`npx shadcn@latest init`) with New York style
-- Set up Firebase SDK (Auth, Firestore, Realtime DB, **Cloud Storage for logo uploads**)
+- **Use Ionic UI Components** (100+ built-in native-like components, no separate install)
+- Set up Firebase SDK (Auth, Firestore, Realtime DB, **Cloud Storage**, **AI Logic**, **App Check**)
 - Configure offline persistence
 - **Set up i18n (multi-language) system**
 
 #### [NEW] `src/lib/i18n/` — Internationalization System
 Lightweight JSON-based translation system (no heavy library needed):
 
-- `config.js` — Language config, default locale, supported locales
+- `config.ts` — Language config, default locale, supported locales
 - `id.json` — 🇮🇩 Bahasa Indonesia translations (default)
 - `en.json` — 🇬🇧 English translations
-- `useTranslation.js` — React hook: `const { t } = useTranslation()`
-- `LanguageContext.jsx` — React Context provider for active language
-- `formatters.js` — Locale-aware number, currency, and date formatting
+- `useTranslation.ts` — React hook: `const { t } = useTranslation()`
+- `LanguageContext.tsx` — React Context provider for active language
+- `formatters.ts` — Locale-aware number, currency, and date formatting
 
 **Supported Languages:**
 
@@ -356,7 +361,7 @@ function CartPanel() {
 ```
 
 **Language Switching:**
-- Selected during **Setup Wizard** (Step 3: Pengaturan Awal)
+- Selected during **Setup Wizard** (Step 3: Pajak & Biaya)
 - Changeable anytime in **Settings** (all roles can change)
 - Instant switch — no page reload needed
 - Saved per user preference in local storage
@@ -695,7 +700,7 @@ Landing Page → [ Daftar / Masuk / Kode Undangan ]
          └── Returning: Login → Store Selector (if multi) → Dashboard
 ```
 
-#### [NEW] `src/app/setup/page.jsx` — Setup Wizard (7 Steps, First-Time Only)
+#### [NEW] `src/pages/Setup.tsx` — Setup Wizard (7 Steps, First-Time Only)
 
 Shown after new owner registers. Progress bar at top: `Step X of 7`
 
@@ -916,7 +921,7 @@ Shown after new owner registers. Progress bar at top: `Step X of 7`
 | 🚚 Customer Tracking | Shown on the public delivery tracking page |
 | 📊 Reports Header | Displayed on exported PDF reports |
 
-#### [NEW] `src/components/ui/LogoUpload.jsx` — Reusable Logo Upload Component
+#### [NEW] `src/components/ui/LogoUpload.tsx` — Reusable Logo Upload Component
 - Drag-and-drop zone with click fallback
 - Real-time image preview (circular crop)
 - Client-side resize to 512x512px before upload (saves bandwidth)
@@ -930,7 +935,7 @@ Shown after new owner registers. Progress bar at top: `Step X of 7`
 - `TabBar.tsx` — `IonTabBar` bottom navigation for phone/tablet screens
 - `AppShell.tsx` — Responsive layout: `IonSplitPane` (sidebar on desktop/tablet, tabs on mobile)
 
-#### [NEW] `src/lib/storeMode.js` — Store Mode Engine
+#### [NEW] `src/lib/storeMode.ts` — Store Mode Engine
 - `STORE_MODES` enum (retail, restaurant)
 - `getModeFeatures(mode)` — Returns feature flags for the active mode
 - `useModeFeatures()` — React hook to access feature flags in components
@@ -944,10 +949,10 @@ Shown after new owner registers. Progress bar at top: `Step X of 7`
 - `cartStore.js` — Cart state (items, quantities, discounts, tax, total)
 - `productStore.js` — Product catalog with search/filter
 - `authStore.js` — User session and role
-- `settingsStore.js` — App settings (tax rate, currency, printer config, **storeMode**, active outlet)
+- `settingsStore.ts` — App settings (tax rate, currency, printer config, **storeMode**, active outlet)
 - `shiftStore.js` — **🆕** Shift management state (open/close, starting cash, transactions)
 
-#### [NEW] `src/app/(pos)/checkout/page.jsx` — Main POS Screen
+#### [NEW] `src/pages/pos/Checkout.tsx` — Main POS Screen
 The heart of the app — split-screen layout:
 - **Left panel (70%)**: Product grid with categories, search bar, and barcode scanner input
 - **Right panel (30%)**: Cart with running total, discount controls, and payment buttons
@@ -976,7 +981,7 @@ The heart of the app — split-screen layout:
   TOTAL:              Rp 101.000
 ```
 
-#### [NEW] `src/app/(pos)/checkout/components/`
+#### [NEW] `src/pages/pos/checkout/components/`
 - `ProductGrid.jsx` — Responsive product grid with category filtering
 - `ProductCard.jsx` — Individual product card with variant/modifier support
 - `CartPanel.jsx` — Shopping cart with line items + rounding + service charge
@@ -1384,7 +1389,7 @@ functions/src/webhooks/
 └── payment.ts              # Cloud Function webhook handler
 ```
 
-#### [NEW] `src/app/(pos)/shift/` — Shift Management (Buka/Tutup Kasir)
+#### [NEW] `src/pages/pos/Shift.tsx` — Shift Management (Buka/Tutup Kasir)
 - **Buka Shift**:
   - Kasir input modal awal (starting cash)
   - Record start time, kasir name
@@ -1400,7 +1405,7 @@ functions/src/webhooks/
 - **Serah Terima**: Transfer shift to another kasir without closing store
 - **Shift History**: View past shifts with all details
 
-#### [NEW] `src/app/(pos)/returns/page.jsx` — Retur, Refund & Void
+#### [NEW] `src/pages/pos/Returns.tsx` — Retur, Refund & Void
 - **Void Transaksi**: Cancel a recently completed transaction (requires Super Admin/Admin PIN approval)
 - **Retur Barang**:
   - Search order by number or scan receipt barcode
@@ -1412,11 +1417,11 @@ functions/src/webhooks/
 - **Void time limit**: Configurable (e.g., void only within 15 minutes of sale)
 
 #### [NEW] `src/lib/firebase/` — Firebase Configuration
-- `config.js` — Firebase app initialization
-- `firestore.js` — Firestore helpers with offline persistence
-- `auth.js` — Authentication helpers
-- `realtime.js` — Realtime Database for GPS tracking
-- `appCheck.js` — App Check with reCAPTCHA Enterprise (protects AI API)
+- `config.ts` — Firebase app initialization
+- `firestore.ts` — Firestore helpers with offline persistence
+- `auth.ts` — Authentication helpers
+- `realtime.ts` — Realtime Database for GPS tracking
+- `appCheck.ts` — App Check with reCAPTCHA Enterprise (protects AI API)
 
 #### [NEW] `src/lib/ai/` — Firebase AI Logic (Gemini) Integration
 
@@ -1621,6 +1626,12 @@ StoreCredit:   { id, customerId, balance, transactions[], outletId, createdAt }
 DeliveryAddress: { id, customerId, label, address, lat, lng, notes }
 Delivery:      { id, orderId, driverId, status, attempts, codAmount, codCollected, codSettled, proofPhotoUrl, proofNotes, failReason, zoneId, fee, assignedAt, pickedUpAt, deliveredAt, failedAt }
 DeliveryZone:  { id, outletId, name, type, coordinates, fee, isActive }
+User:          { id, name, email, phone, storeIds[], lastStoreId, createdAt }
+Staff:         { id, userId, storeId, outletId, role, permissionLevel, name, phone, pinHash, isActive, schedule, createdAt }
+Invitation:    { id, code, storeId, outletId, role, staffName, createdBy, expiresAt, status, usedBy, usedAt }
+Customer:      { id, name, phone, email, tier, loyaltyPoints, totalSpent, addresses[], outletId, createdAt }
+AIUsageLog:    { id, type, model, inputTokens, outputTokens, estimatedCost, userId, userName, productName, success, errorMessage, durationMs, outletId, createdAt }
+AIQuota:       { monthlyLimit, dailyLimit, imageGenEnabled, autoSuggestEnabled, currentMonthUsage, currentDayUsage, lastResetDate, costAlertThreshold, costAutoDisableThreshold, allowedRoles[] }
 ```
 
 ---
@@ -1628,10 +1639,11 @@ DeliveryZone:  { id, outletId, name, type, coordinates, fee, isActive }
 ### Phase 3: Thermal Printing
 
 #### [NEW] `src/lib/printer/`
-- `escpos.js` — ESC/POS command builder (text formatting, alignment, barcode, QR code, cut paper)
-- `usbPrinter.js` — WebUSB connection manager (discover, connect, print)
-- `bluetoothPrinter.js` — Web Bluetooth fallback for wireless printers
-- `receiptTemplate.js` — Receipt layout builder (mode-aware):
+- `escpos.ts` — ESC/POS command builder (text formatting, alignment, barcode, QR code, cut paper)
+- `usbPrinter.ts` — WebUSB connection manager (discover, connect, print)
+- `bluetoothPrinter.ts` — Web Bluetooth fallback for wireless printers
+- `networkPrinter.ts` — TCP/IP raw socket for LAN-connected printers (Epson TM series, Bixolon)
+- `receiptTemplate.ts` — Receipt layout builder (mode-aware):
 
   **🛒 Retail Receipt:**
   ```
@@ -1690,7 +1702,7 @@ DeliveryZone:  { id, outletId, name, type, coordinates, fee, isActive }
     tidak dapat dikembalikan
   ================================
   ```
-- `kitchenTicket.js` — **🍽️ Restaurant only**: KOT/BOT template (order items with modifiers, large font, table number)
+- `kitchenTicket.ts` — **🍽️ Restaurant only**: KOT/BOT template (order items with modifiers, large font, table number)
 
 #### [NEW] `src/components/printer/`
 - `PrinterSetup.jsx` — Printer discovery and pairing UI
@@ -1714,7 +1726,7 @@ DeliveryZone:  { id, outletId, name, type, coordinates, fee, isActive }
 
 ### Phase 4: Delivery Management & Live Tracking
 
-#### [NEW] `src/app/(pos)/delivery/page.jsx` — Delivery Dashboard
+#### [NEW] `src/pages/pos/Delivery.tsx` — Delivery Dashboard
 - Kanban board layout: New → Preparing → Picked Up → En Route → Delivered
 - Drag-and-drop order cards between columns
 - Assign/reassign drivers to orders
@@ -1724,7 +1736,7 @@ DeliveryZone:  { id, outletId, name, type, coordinates, fee, isActive }
 - **🆕 Driver availability counter** in header ("3 driver aktif")
 - **🆕 Scheduled orders** section showing upcoming deliveries
 
-#### [NEW] `src/app/(pos)/delivery/components/`
+#### [NEW] `src/pages/pos/delivery/components/`
 - `DeliveryBoard.jsx` — Kanban columns with order cards
 - `OrderCard.jsx` — Order summary card with status badge + COD tag
 - `DriverAssignment.jsx` — Driver selection dropdown (shows only online drivers)
@@ -1738,7 +1750,7 @@ DeliveryZone:  { id, outletId, name, type, coordinates, fee, isActive }
 - `ProofOfDelivery.jsx` — **🆕** Photo capture + notes for delivery confirmation
 - `CODReconciliation.jsx` — **🆕** Driver cash collection tracking & settlement
 
-#### [NEW] `src/app/track/[orderId]/page.jsx` — Customer Tracking Page
+#### [NEW] `src/pages/track/TrackOrder.tsx` — Customer Tracking Page
 - Public page (no auth required)
 - Live map with animated driver marker
 - Order details and status
@@ -1747,7 +1759,7 @@ DeliveryZone:  { id, outletId, name, type, coordinates, fee, isActive }
 - Auto-refresh via Realtime Database listener
 - **🆕 Multi-stop indicator** if driver has multiple deliveries
 
-#### [NEW] `src/app/(driver)/driver/page.jsx` — Driver Mobile View
+#### [NEW] `src/pages/driver/DriverView.tsx` — Driver Mobile View
 - Optimized for phone screens
 - **🆕 Online/Offline toggle** at top of screen
 - Current delivery with navigation
@@ -1760,7 +1772,7 @@ DeliveryZone:  { id, outletId, name, type, coordinates, fee, isActive }
 - GPS broadcasting (sends location every 5 seconds to Realtime DB)
 
 #### [NEW] `src/lib/tracking/`
-- `gpsTracker.js` — Geolocation API wrapper with battery-efficient polling
+- `gpsTracker.ts` — Geolocation API wrapper with battery-efficient polling
 - `locationSync.js` — Push GPS coordinates to Firebase Realtime DB
 - `etaCalculator.js` — Simple distance-based ETA estimation
 - `deliveryFee.js` — **🆕** Fee calculation engine (flat/per-km/zone-based)
@@ -1768,7 +1780,7 @@ DeliveryZone:  { id, outletId, name, type, coordinates, fee, isActive }
 - `autoAssign.js` — **🆕** Auto-assign nearest available online driver
 
 #### [NEW] Ongkos Kirim (Delivery Fee) System
-3 models, configurable per outlet:
+4 models, configurable per outlet:
 
 | Model | Contoh | Cara Kerja |
 |---|---|---|
@@ -1861,7 +1873,7 @@ Auto-send via wa.me API at each status change:
 
 ### Phase 5: Inventory, Reports, Staff & Customers
 
-#### [NEW] `src/app/(admin)/inventory/page.jsx` — Inventory Management
+#### [NEW] `src/pages/admin/Inventory.tsx` — Inventory Management
 - Stock levels table with search and filters
 - Low stock alerts (visual badges + notification)
 - Stock adjustment (in/out with reason)
@@ -1884,7 +1896,7 @@ Auto-send via wa.me API at each status change:
   - Auto-switch price at checkout when qty threshold met
   - Optional: harga per tier pelanggan (Regular/Silver/Gold/Platinum)
 
-#### [NEW] `src/app/(admin)/vendors/page.jsx` — Vendor / Supplier Management
+#### [NEW] `src/pages/admin/Vendors.tsx` — Vendor / Supplier Management
 - Vendor list with search, filter by status (active/inactive)
 - Add/edit vendor: name, contact person, phone, email, address, notes
 - **Link products to vendor** — which vendor supplies which products
@@ -1892,7 +1904,7 @@ Auto-send via wa.me API at each status change:
 - Purchase history per vendor
 - Quick action: "Buat PO" (create Purchase Order) from vendor page
 
-#### [NEW] `src/app/(admin)/purchase-orders/page.jsx` — Purchase Orders (PO)
+#### [NEW] `src/pages/admin/PurchaseOrders.tsx` — Purchase Orders (PO)
 - PO list with status tabs: Semua | Draft | Dikirim | Diterima | Dibatalkan
 - **Create PO**:
   - Select vendor → auto-populate vendor’s products
@@ -1911,7 +1923,7 @@ Auto-send via wa.me API at each status change:
   - Copy link
 - **Receive goods** — opens Goods Receiving flow
 
-#### [NEW] `src/app/(admin)/purchase-orders/receive/[poId]/page.jsx` — Goods Receiving
+#### [NEW] `src/pages/admin/GoodsReceiving.tsx` — Goods Receiving
 - View PO items with expected qty
 - Input actual received qty per item
 - Mark items: Diterima Penuh | Diterima Sebagian | Tidak Diterima
@@ -1919,7 +1931,7 @@ Auto-send via wa.me API at each status change:
 - Option to create new PO for remaining items (partial delivery)
 - Print receiving slip on thermal printer
 
-#### [NEW] `src/app/(admin)/stock-opname/page.jsx` — Stock Opname (Physical Count)
+#### [NEW] `src/pages/admin/StockOpname.tsx` — Stock Opname (Physical Count)
 - Start new stock opname session
 - Scan barcode or search product → input physical count
 - **System vs Physical comparison** with variance column
@@ -1935,7 +1947,7 @@ Auto-send via wa.me API at each status change:
 - Suggested qty = `(minStock * 2) - currentStock` (configurable multiplier)
 - Notification push for low stock alerts
 
-#### [NEW] `src/app/(admin)/reports/page.jsx` — Reports & Analytics
+#### [NEW] `src/pages/admin/Reports.tsx` — Reports & Analytics
 Comprehensive reporting suite with date range picker and export options:
 
 **📊 Dashboard / Ringkasan Harian:**
@@ -2155,7 +2167,7 @@ Simple forecasting berdasarkan data historis:
 | Share Image | Screenshot chart → share ke WA/social media |
 | Scheduled Export | Auto-export laporan bulanan ke format tertentu |
 
-#### [NEW] `src/app/(admin)/activity-log/page.jsx` — Activity Log / Audit Trail
+#### [NEW] `src/pages/admin/ActivityLog.tsx` — Activity Log / Audit Trail
 - Log semua aktivitas: edit produk, hapus pesanan, ubah harga, void, retur, login/logout, perubahan settings
 - Filter: per user, per tipe aksi, per tanggal
 - **Immutable**: Log tidak bisa dihapus atau diedit oleh siapapun
@@ -2163,7 +2175,7 @@ Simple forecasting berdasarkan data historis:
 - Export ke CSV untuk audit
 - Hanya bisa dilihat oleh Super Admin & Admin
 
-#### [NEW] `src/app/(pos)/credit/page.jsx` — Bon / Hutang (Credit Sales)
+#### [NEW] `src/pages/pos/Credit.tsx` — Bon / Hutang (Credit Sales)
 - **Daftar Piutang**: Semua hutang pelanggan yang belum lunas
 - **Buat Hutang**: Saat checkout, pilih "Bayar Nanti" → linked ke pelanggan
 - **Bayar Hutang**: Pelanggan bayar sebagian atau lunas
@@ -2173,7 +2185,7 @@ Simple forecasting berdasarkan data historis:
 - **Status**: Belum Bayar → Bayar Sebagian → Lunas
 - **Riwayat**: Riwayat pembayaran hutang per pelanggan
 
-#### [NEW] `src/app/(admin)/staff/page.jsx` — Staff Management
+#### [NEW] `src/pages/admin/Staff.tsx` — Staff Management
 - Staff list with roles and status
 - Add/edit staff with role assignment
 - Role-based access control (**6 roles**):
@@ -2204,10 +2216,16 @@ Simple forecasting berdasarkan data historis:
 | **Terima barang (receiving)** | ✅ | ✅ | ❌ | ✅ | ❌ | ❌ |
 | **Stock opname** | ✅ | ✅ | ❌ | ✅ | ❌ | ❌ |
 | Kelola pelanggan | ✅ | ✅ | ✅ | ❌ | ❌ | ❌ |
-| Checkout / POS | ✅ | ❌ | ✅ | ❌ | ❌ | ❌ |
+| Checkout / POS | ✅ | ✅ | ✅ | ❌ | ❌ | ❌ |
 | Kitchen Display | ✅ | ❌ | ❌ | ❌ | ✅ | ❌ |
 | Delivery Board | ✅ | ✅ | ✅ | ❌ | ❌ | ❌ |
 | Driver View | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ |
+| Buat bon/hutang | ✅ | ✅ | ✅ (Senior) | ❌ | ❌ | ❌ |
+| Kelola voucher | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ |
+| Gunakan AI produk | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ |
+| AI usage dashboard | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| Export laporan | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ |
+| Buat draft PO | ✅ | ✅ | ❌ | ✅ | ❌ | ❌ |
 | Printer & receipt settings | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ |
 | Theme & language | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 
@@ -2314,13 +2332,13 @@ Implementasi: Tambahkan field `permissionLevel: 'senior' | 'junior'` di staff mo
 | 🍳 Dapur | Order baru, modifier note, rush order |
 | 🚚 Driver | Delivery assignment, route update, COD reminder |
 
-#### [NEW] `src/app/(admin)/customers/page.jsx` — Customer Database
+#### [NEW] `src/pages/admin/Customers.tsx` — Customer Database
 - Customer list with search
 - Purchase history per customer
 - Loyalty points system (earn points per purchase, redeem for discounts)
 - Customer groups/tiers (Regular, Silver, Gold, Platinum)
 
-#### [NEW] `src/app/(pos)/kitchen/page.jsx` — Kitchen Display System (KDS)
+#### [NEW] `src/pages/pos/Kitchen.tsx` — Kitchen Display System (KDS)
 - Full-screen order queue
 - Color-coded by priority/wait time (green → yellow → red)
 - One-tap "Done" to mark items as prepared
@@ -2331,7 +2349,7 @@ Implementasi: Tambahkan field `permissionLevel: 'senior' | 'junior'` di staff mo
 
 ### Phase 6: Settings & Configuration
 
-#### [NEW] `src/app/(admin)/settings/page.jsx` — Settings Page
+#### [NEW] `src/pages/admin/Settings.tsx` — Settings Page
 - **🔒 Super Admin Only**:
   - Kategori Toko: Switch between 🛒 Retail and 🍽️ Restoran mode (per outlet)
   - Outlet Management: Add/edit/switch outlets, set mode per outlet
@@ -2368,7 +2386,7 @@ Config is saved **per outlet** in Firestore.
 
 **How it works:**
 ```javascript
-// src/stores/settingsStore.js
+// src/stores/settingsStore.ts
 const moduleVisibility = {
   delivery: true,
   vendors: true,
@@ -2434,7 +2452,14 @@ skokpos/
 │   │   ├── variables.css      # Ionic CSS variables (colors, fonts)
 │   │   └── tailwind.css       # Tailwind base + custom styles
 │   ├── pages/                 # All page components
-│   │   ├── Setup.tsx          # First-time setup wizard
+│   │   ├── Setup.tsx          # First-time setup wizard (7 steps)
+│   │   ├── auth/              # 🆕 Registration & Authentication
+│   │   │   ├── LandingPage.tsx    # Landing (Daftar / Masuk / Kode)
+│   │   │   ├── RegisterPage.tsx   # Phone OTP / Google / Email
+│   │   │   ├── LoginPage.tsx      # Login + PIN quick login
+│   │   │   ├── ProfileSetup.tsx   # First-time profile
+│   │   │   ├── StaffInvitationPage.tsx # Staff enters invite code
+│   │   │   └── StoreSelector.tsx  # Multi-store user picks store
 │   │   ├── pos/
 │   │   │   ├── Checkout.tsx   # Main POS checkout (mode-aware)
 │   │   │   ├── Shift.tsx      # Shift management (open/close kasir)
@@ -2451,7 +2476,9 @@ skokpos/
 │   │   │   ├── ActivityLog.tsx # Audit trail
 │   │   │   ├── Staff.tsx      # Staff management
 │   │   │   ├── Customers.tsx  # Customer database
-│   │   │   └── Settings.tsx   # App settings + module visibility
+│   │   │   ├── Settings.tsx   # App settings + module visibility
+│   │   │   ├── AIUsageDashboard.tsx # 🆕 AI usage stats (Super Admin)
+│   │   │   └── AISettings.tsx # 🆕 AI configuration (Super Admin)
 │   │   ├── driver/
 │   │   │   └── DriverView.tsx # Driver mobile view
 │   │   └── track/
@@ -2465,6 +2492,24 @@ skokpos/
 │   │   └── charts/            # Chart components (Recharts)
 │   ├── lib/
 │   │   ├── firebase/          # Firebase config & helpers
+│   │   ├── auth/              # 🆕 Authentication helpers
+│   │   │   ├── authService.ts #    Phone OTP, Google, Email auth
+│   │   │   └── pinAuth.ts     #    PIN quick login for kasir
+│   │   ├── multiTenant/       # 🆕 Multi-tenant architecture
+│   │   │   ├── storeService.ts #   Create/switch/list stores
+│   │   │   ├── invitationService.ts # Generate/verify/accept invitations
+│   │   │   └── planService.ts #    Pricing plan enforcement
+│   │   ├── ai/                # 🆕 Firebase AI Logic (Gemini)
+│   │   │   ├── aiService.ts   #    Text, image, JSON model init
+│   │   │   ├── productAI.ts   #    Category/unit/SKU auto-suggest
+│   │   │   ├── imageGenerator.ts # Product image generation
+│   │   │   ├── aiUsageLogger.ts # Usage logging to Firestore
+│   │   │   └── aiQuotaManager.ts # Daily/monthly quota enforcement
+│   │   ├── payment/           # 🆕 Gateway-ready payment
+│   │   │   ├── gateway.ts     #    PaymentGateway interface
+│   │   │   ├── paymentService.ts # Payment orchestration
+│   │   │   ├── mockGateway.ts #    Mock gateway implementation
+│   │   │   └── edcHandler.ts  #    EDC machine ref input
 │   │   ├── i18n/              # Internationalization
 │   │   │   ├── config.ts      #    Language config
 │   │   │   ├── id.json        #    🇮🇩 Bahasa Indonesia
@@ -2480,9 +2525,13 @@ skokpos/
 │   │   ├── models/            # Data models & validation
 │   │   ├── storeMode.ts       # Store mode engine & feature flags
 │   │   ├── utils.ts           # cn() helper for Tailwind class merging
-│   │   └── hooks/             # Custom React hooks
+│   │   └── hooks/             # Custom React hooks (useProductAI, etc.)
 │   ├── stores/                # Zustand state stores (incl. shiftStore)
 │   └── styles/                # Additional custom styles
+├── functions/                  # 🆕 Firebase Cloud Functions
+│   └── src/
+│       └── webhooks/
+│           └── payment.ts     # Payment gateway webhook handler
 ├── capacitor.config.ts        # Capacitor configuration
 ├── ionic.config.json          # Ionic CLI configuration
 ├── tailwind.config.ts         # Tailwind CSS configuration
@@ -2497,12 +2546,13 @@ skokpos/
 
 | Phase | Scope | Est. Effort |
 |---|---|---|
-| **Phase 1** | Project setup, design system, app shell, **setup wizard**, i18n | Foundation |
-| **Phase 2** | Product catalog, checkout, **QRIS, quick cash, rounding, service charge, voucher, DP, tips, bank transfer, cash drawer**, shift, retur/void, bon/hutang, multi-price, open price, weight-based | Core POS |
-| **Phase 3** | Thermal printing, receipts, **WA digital receipt, barcode label printing**, KOT | Printing |
-| **Phase 4** | Delivery board, live tracking, driver app, **ongkir, COD, WA notif, POD, zones, batch, auto-assign** | Delivery |
-| **Phase 5** | Inventory, **expiry tracking**, vendors, PO, stock opname, **activity log, scheduled reports**, staff, customers, KDS | Management |
-| **Phase 6** | Settings, **module visibility**, PWA optimization, final polish | Polish |
+| **Phase 1** | Project setup, design system, app shell, **registration & auth** (Phone OTP/Google/Email), **multi-tenant architecture**, **staff invitation**, **PIN quick login**, **pricing plans**, **setup wizard (7 steps)**, i18n | 2-3 hari |
+| **Phase 2** | Product catalog, checkout, **QRIS, quick cash, rounding, service charge, voucher, DP, tips, bank transfer, cash drawer, EDC mode, COD, gateway-ready architecture, AI product features** (image gen, auto-suggest, online search), **AI usage dashboard, AI quota control**, payment ref, change denomination, loyalty points, shift, retur/void, bon/hutang, multi-price, open price, weight-based | 5-7 hari |
+| **Phase 3** | Thermal printing, receipts, **WA digital receipt, barcode label printing**, KOT, **network printer** | 2-3 hari |
+| **Phase 4** | Delivery board, live tracking, driver app, **ongkir (4 models), COD, WA notif, POD, zones, batch, auto-assign, scheduled delivery, failed delivery** | 3-5 hari |
+| **Phase 5** | Inventory, **expiry tracking**, vendors, PO, stock opname, **activity log, scheduled reports, KPI dashboard, comparison reports, shrinkage, smart alerts, ABC analysis, tax report, forecasting, owner mobile dashboard**, staff **(6 roles + custom)**, customers, KDS | 6-8 hari |
+| **Phase 6** | Settings, **module visibility**, PWA + native build optimization, final polish | 2-3 hari |
+| **Total** | | **20-29 hari** |
 
 > [!TIP]
 > I recommend building in this order so you can test the core POS flow (checkout → print receipt) as early as Phase 3, and add complexity progressively.
@@ -2551,6 +2601,35 @@ skokpos/
 - **Delivery Zone**: Draw zone on map → set fee → order outside zone → verify rejection
 - **Offline Mode**: Disconnect WiFi → process sale → reconnect → verify data syncs to Firestore
 - **Responsive Design**: Test on tablet (POS), phone (driver), desktop (admin)
+
+### Additional Test Scenarios (Registration, AI, Gateway, Multi-Tenant)
+- **Phone OTP Registration**: Register via +62 phone → receive OTP → verify → complete profile → land on Setup Wizard
+- **Google Sign-In**: Register via Google → auto-fill profile → proceed to Setup Wizard
+- **Multi-Tenant Isolation**: Create Store A → create Store B → verify Store A data invisible from Store B
+- **Staff Invitation**: Generate invite code → share via WA → staff inputs code → verify joins with correct role
+- **PIN Quick Login**: Set PIN → logout → re-login with PIN → verify access level correct
+- **PIN Lock**: Enter wrong PIN 5× → verify 15-minute lock enforced
+- **Setup Wizard 7 Steps**: Complete all 7 steps → verify store, payment, delivery, staff, products all created
+- **Store Selector**: User joins 2 stores → login → verify store selector shown → switch stores
+- **AI Image Generator**: Add product "Nasi Goreng" → verify AI generates placeholder image with ✨ badge
+- **AI Auto-Suggest**: Type "Indomie Goreng" → verify category "Mie Instan", unit "pcs" auto-suggested
+- **AI Usage Dashboard**: Generate AI content → login as Super Admin → verify usage count tracked
+- **AI Quota Control**: Set daily limit to 3 → exceed 3 calls → verify AI disabled with "Batas harian tercapai"
+- **AI Role Restriction**: Login as Kasir → verify AI features not available (if not in allowed roles)
+- **Gateway Architecture**: Verify MockGateway processes payment → check PaymentGateway interface abstraction
+- **EDC Mode**: Configure card payment as EDC → process card → verify ref # input required → verify saved
+- **Bank Transfer**: Select transfer → verify bank name + rekening shown → confirm with ref #
+- **Change Denomination**: Pay Rp 50.000 for Rp 33.040 → verify breakdown: 1×Rp10.000 + 1×Rp5.000 + 1×Rp2.000
+- **Tips (Restaurant)**: Restaurant mode → add 10% tip → verify tip shown separately on receipt
+- **Approval Chain**: Kasir tries >10% discount → PIN modal appears → Admin inputs PIN → verify approved & logged
+- **Smart Reorder**: Set stock below min → verify alert notification → one-click PO draft generation
+- **Customer Loyalty**: Customer purchases → verify points earned → redeem points → verify discount applied
+- **Auto-Assign Driver**: New delivery order → verify nearest online driver auto-assigned with notification
+- **Scheduled Delivery**: Select time slot 14:00-16:00 → verify order appears on board at scheduled time
+- **KPI Dashboard**: Process sales → verify real-time revenue, order count, and average order update
+- **Pricing Plans**: Free tier → try adding 4th staff → verify limit enforced with upgrade prompt
+- **Custom Role Builder**: Create custom role → assign permissions → assign to staff → verify access matches
+- **Native Build**: Build Android APK → install on device → verify camera, GPS, barcode scanner work
 - **PWA Install**: Install on Android via Chrome → verify works offline
 - **Theme**: Toggle light/dark mode → verify all pages render correctly
 
@@ -2581,14 +2660,14 @@ skokpos/
 21. ✅ **PIN Quick Login**: Fast staff switching at the terminal
 22. ✅ **Customer Loyalty**: Points system with tier-based benefits
 23. ✅ **Kitchen Display**: Real-time order queue for kitchen staff
-24. ✅ **Multi-Role Access (5 roles)**: Super Admin → Admin → Kasir → Dapur → Driver
+24. ✅ **Multi-Role Access (6 roles)**: Super Admin → Admin → Kasir → Gudang → Dapur → Driver
 25. ✅ **Module Visibility**: Super Admin can show/hide modules per outlet
 26. ✅ **Real-time Sync**: Changes sync across all connected devices instantly
 27. ✅ **Multi-Language**: Bahasa Indonesia (default) + English
 28. ✅ **Vendor & Purchase Orders**: Full procurement cycle
 29. ✅ **Smart Reorder**: Auto-suggest PO when stock is low
 30. ✅ **Stock Opname**: Physical count with system reconciliation
-31. ✅ **Delivery Fee / Ongkir**: 3 models (gratis/flat/per-km/zona)
+31. ✅ **Delivery Fee / Ongkir**: 4 models (gratis/flat/per-km/zona)
 32. ✅ **Customer Address & Map Pin**: Saved addresses with GPS coordinates
 33. ✅ **COD Tracking**: Cash collection & driver reconciliation
 34. ✅ **WhatsApp Delivery Notifications**: Auto-notify customer at each status

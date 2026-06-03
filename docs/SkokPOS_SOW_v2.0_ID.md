@@ -83,7 +83,7 @@ Proyek ini dibagi menjadi **6 fase** dengan deliverables sebagai berikut:
 | 1.6 | Firebase Setup | Pembuatan proyek Firebase baru, Firestore dengan offline persistence, Authentication, Realtime Database, Cloud Storage |
 | 1.7 | State Management | Arsitektur Zustand store untuk cart, produk, auth, settings, dan module visibility |
 | 1.8 | Sistem i18n (Multi-Bahasa) | Sistem terjemahan berbasis JSON dengan hook React `useTranslation()`. Bahasa Indonesia (default) & English |
-| 1.9 | Setup Wizard | Wizard onboarding 4 langkah saat pertama kali buka: Pilih Kategori Toko → Info Bisnis & Logo → Pengaturan Awal → Buat Outlet Pertama |
+| 1.9 | Setup Wizard | Wizard onboarding **7 langkah**: (1) Kategori Toko, (2) Info Bisnis & Outlet, (3) Pajak & Biaya, (4) Metode Pembayaran, (5) Pengiriman, (6) Undang Staff, (7) Produk Pertama. Progress bar, skip option untuk step 6-7 |
 | 1.10 | **Registrasi & Onboarding** | 3 metode registrasi: Phone OTP (+62), Google Sign-In, Email/Password. Profil setup setelah register. Firebase Authentication. Deep link support untuk invitation |
 | 1.11 | **Multi-Tenant Architecture** | Setiap toko = data terpisah di Firestore. 1 user bisa join multiple stores. Store selector saat login. Firestore security rules per store |
 | 1.12 | **Staff Invitation System** | Owner generate kode undangan (7 hari expiry). Share via WhatsApp link, QR code, email, atau copy kode. Staff download app → input kode → join toko dengan role yang sudah ditentukan. Single-use, revocable |
@@ -97,6 +97,12 @@ Proyek ini dibagi menjadi **6 fase** dengan deliverables sebagai berikut:
 - App shell dimuat dalam waktu kurang dari 2 detik pada koneksi 4G
 - Switch bahasa Indonesia ↔ English tanpa reload halaman
 - Setup Wizard menampilkan data contoh sesuai kategori toko yang dipilih
+- Setup Wizard 7 langkah berjalan dari awal sampai selesai dengan progress bar
+- Registrasi via Phone OTP berhasil dan user masuk ke Setup Wizard
+- Multi-tenant: data toko A tidak bisa diakses oleh toko B (Firestore rules)
+- Kode undangan staff berhasil di-generate, di-share, dan diterima dengan role yang benar
+- PIN quick login kasir berfungsi, lock setelah 5× salah PIN selama 15 menit
+- App ter-build sebagai Android APK dan iOS IPA via Capacitor
 
 ---
 
@@ -277,7 +283,7 @@ Kembali:            Rp  13.312
 | 4.9 | Kalkulator ETA | Estimasi waktu tiba berbasis jarak |
 | 4.10 | Simulasi Demo | Simulasi pergerakan GPS driver untuk testing/demo tanpa driver asli |
 | 4.11 | Timeline Pengiriman | Riwayat perubahan status dengan timestamp untuk setiap pesanan |
-| 4.12 | **Ongkos Kirim (Delivery Fee)** | 3 model: gratis, flat rate (Rp 10.000), per-km (Rp 3.000/km min Rp 5.000), zona-based. Gratis ongkir jika order ≥ threshold (konfigurabel). Ongkir tampil di struk |
+| 4.12 | **Ongkos Kirim (Delivery Fee)** | 4 model: gratis, flat rate (Rp 10.000), per-km (Rp 3.000/km min Rp 5.000), zona-based. Gratis ongkir jika order ≥ threshold (konfigurabel). Ongkir tampil di struk |
 | 4.13 | **Alamat Pelanggan & Pin Peta** | Multiple alamat tersimpan per pelanggan, pin lokasi di peta (Leaflet), label (Rumah/Kantor/Lainnya), catatan alamat, autocomplete |
 | 4.14 | **Cash on Delivery (COD)** | Tag COD per order, driver input uang diterima, rekonsiliasi COD admin, setor kas driver → admin konfirmasi, laporan saldo COD per driver |
 | 4.15 | **Notifikasi WhatsApp ke Pelanggan** | Auto-send via wa.me: pesanan diterima, driver ditugaskan, sedang diantar (+ link tracking), terkirim. Template konfigurabel |
@@ -705,13 +711,13 @@ Staff:         { id, name, phone, email, role, pin, isActive, outletId, createdA
 
 | Fase | Deskripsi | Estimasi Durasi |
 |---|---|---|
-| Fase 1 | Fondasi, Sistem Desain & Setup Wizard | 2-3 hari |
+| Fase 1 | Fondasi, Sistem Desain, Setup Wizard (7 Langkah), **Registrasi & Onboarding, Multi-Tenant, Undangan Staff, PIN Quick Login** | 2-3 hari |
 | Fase 2 | POS Inti, Checkout, **Shift, Retur/Void, Bon/Hutang, Multi-Price, Open Price, Timbangan** | 5-7 hari |
 | Fase 3 | Cetak Struk Thermal, **Struk WA, Label Barcode** | 2-3 hari |
 | Fase 4 | Pengiriman & Pelacakan Live, **Ongkir, COD, WhatsApp, Proof of Delivery, Auto-Assign, Zona** | 3-5 hari |
 | Fase 5 | Inventaris, **Kadaluarsa**, Vendor, PO, Stok Opname, **Activity Log, Laporan Otomatis**, Karyawan, Pelanggan, KDS | 6-8 hari |
 | Fase 6 | Pengaturan, Kelola Modul & Polish | 2-3 hari |
-| | **Total Estimasi** | **20-30 hari** |
+| | **Total Estimasi** | **20-29 hari** |
 
 > [!NOTE]
 > Estimasi timeline mengasumsikan sesi pengembangan terfokus. Durasi aktual dapat bervariasi berdasarkan siklus feedback, perubahan requirement, dan testing.
