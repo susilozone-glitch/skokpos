@@ -5,7 +5,7 @@
 
 | | |
 |---|---|
-| **Versi Dokumen** | 3.4 |
+| **Versi Dokumen** | 3.5 |
 | **Tanggal** | 3 Juni 2026 |
 | **Disiapkan Untuk** | Susilogiono |
 | **Nama Proyek** | SkokPOS |
@@ -56,9 +56,9 @@ Proyek ini dibagi menjadi **6 fase** dengan deliverables sebagai berikut:
 
 ---
 
-#### Fase 1: Fondasi Proyek, Sistem Desain & Setup Wizard
+#### Fase 1: Fondasi Proyek, Sistem Desain, Registrasi & Multi-Tenant
 
-**Tujuan**: Membangun fondasi teknis, bahasa desain, dan shell aplikasi responsif.
+**Tujuan**: Membangun fondasi teknis, bahasa desain, shell aplikasi responsif, serta sistem registrasi, arsitektur multi-tenant, dan undangan staff.
 
 | # | Deliverable | Deskripsi |
 |---|---|---|
@@ -84,6 +84,11 @@ Proyek ini dibagi menjadi **6 fase** dengan deliverables sebagai berikut:
 | 1.7 | State Management | Arsitektur Zustand store untuk cart, produk, auth, settings, dan module visibility |
 | 1.8 | Sistem i18n (Multi-Bahasa) | Sistem terjemahan berbasis JSON dengan hook React `useTranslation()`. Bahasa Indonesia (default) & English |
 | 1.9 | Setup Wizard | Wizard onboarding 4 langkah saat pertama kali buka: Pilih Kategori Toko → Info Bisnis & Logo → Pengaturan Awal → Buat Outlet Pertama |
+| 1.10 | **Registrasi & Onboarding** | 3 metode registrasi: Phone OTP (+62), Google Sign-In, Email/Password. Profil setup setelah register. Firebase Authentication. Deep link support untuk invitation |
+| 1.11 | **Multi-Tenant Architecture** | Setiap toko = data terpisah di Firestore. 1 user bisa join multiple stores. Store selector saat login. Firestore security rules per store |
+| 1.12 | **Staff Invitation System** | Owner generate kode undangan (7 hari expiry). Share via WhatsApp link, QR code, email, atau copy kode. Staff download app → input kode → join toko dengan role yang sudah ditentukan. Single-use, revocable |
+| 1.13 | **PIN Quick Login** | Kasir login cepat dengan PIN 4-6 digit di POS terminal. Pilih toko dulu, lalu input PIN. Untuk pergantian shift tanpa logout penuh |
+| 1.14 | **Pricing Plans (Opsional)** | 3 tier: Free (3 staff, 1 outlet), Pro Rp 99K/bln (10 staff, 3 outlet), Business Rp 299K/bln (unlimited). Bisa ditambahkan nanti |
 
 **Kriteria Penerimaan**:
 - App ter-install sebagai PWA di Android Chrome
@@ -767,6 +772,10 @@ Proyek dianggap selesai ketika:
 46. ✅ AI auto-suggest kategori dan unit produk
 47. ✅ AI usage dashboard menampilkan statistik penggunaan
 48. ✅ AI quota dan cost control berfungsi (batas harian/bulanan)
+49. ✅ Registrasi via Phone OTP, Google, dan Email berfungsi
+50. ✅ Multi-tenant: data toko terpisah, security rules terpasang
+51. ✅ Staff invitation via kode/WA/QR berfungsi
+52. ✅ PIN quick login untuk kasir di POS terminal
 
 ### 7.2 Tanda Tangan Persetujuan
 
@@ -788,5 +797,5 @@ Setiap perubahan terhadap ruang lingkup yang didefinisikan dalam SOW ini harus d
 ---
 
 *Dokumen dibuat pada 3 Juni 2026*
-*SkokPOS v3.4 — Kerangka Acuan Kerja / Statement of Work*
+*SkokPOS v3.5 — Kerangka Acuan Kerja / Statement of Work*
 

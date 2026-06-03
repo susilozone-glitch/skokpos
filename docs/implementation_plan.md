@@ -454,6 +454,231 @@ No separate installation needed — all included in `@ionic/react`:
 | `IonChip` | Filter tags, category pills |
 | `IonInfiniteScroll` | Lazy-load long product lists |
 
+#### [NEW] `src/pages/auth/` — Registration & Authentication
+
+**Landing Page (`LandingPage.tsx`):**
+```
+┌─────────────────────────────┐
+│        SkokPOS               │
+│                              │
+│  [ 🆕 Daftar Baru ]         │  ← New store owner
+│  [ 🔑 Masuk ]               │  ← Returning user
+│  [ 📨 Punya Kode Undangan? ]│  ← Staff joining
+└─────────────────────────────┘
+```
+
+**Registration Methods (`RegisterPage.tsx`):**
+
+| Method | Firebase Auth API | Why |
+|---|---|---|
+| 📱 Phone OTP (+62) | `signInWithPhoneNumber` | Indonesia primary — semua punya HP |
+| G Google | `signInWithPopup(GoogleAuthProvider)` | 1-tap, no password |
+| ✉️ Email | `createUserWithEmailAndPassword` | Business email |
+
+**Phone OTP Flow:**
+```
+Input +62 → Send OTP → Input 6 digit → Verify
+→ Profile Setup (nama, email optional)
+→ Store Setup Wizard (if new owner)
+```
+
+**Login Page (`LoginPage.tsx`):**
+- Same 3 methods (Phone, Google, Email)
+- PIN Quick Login for kasir (select store → enter 4-6 digit PIN)
+- "Lupa Password?" / "Lupa PIN?" recovery flows
+- Remember device (biometric unlock on mobile)
+
+**Profile Setup (`ProfileSetup.tsx`):**
+- Nama Lengkap
+- Email (optional if registered via phone)
+- Phone (auto-filled if registered via phone)
+- Shown only on first registration
+
+#### [NEW] `src/lib/auth/` — Authentication Helpers
+
+```typescript
+// src/lib/auth/authService.ts
+// - registerWithPhone(phoneNumber) → sends OTP
+// - verifyOTP(code) → creates user
+// - registerWithGoogle() → Google popup
+// - registerWithEmail(email, password) → email/password
+// - loginWithPIN(storeId, pin) → quick kasir login
+// - logout()
+// - getCurrentUser()
+// - onAuthStateChanged(callback)
+```
+
+```typescript
+// src/lib/auth/pinAuth.ts
+// PIN Quick Login for kasir at POS terminal
+// - PIN stored as bcrypt hash in Firestore (staff doc)
+// - Max 5 attempts → lock 15 minutes
+// - PIN change requires current PIN or Admin approval
+```
+
+#### [NEW] Multi-Tenant Architecture
+
+**Data Isolation — Every store = separate data:**
+```
+stores/{storeId}/               ← Each store is isolated
+├── info: { name, owner, plan, memberIds[], createdAt }
+├── outlets/{outletId}/
+├── products/{productId}/
+├── orders/{orderId}/
+├── staff/{userId}/             ← Role & permissions within store
+├── settings/
+├── ai_usage/{logId}/
+└── invitations/{code}/
+
+users/{userId}/                 ← Global user registry
+├── name, email, phone
+├── storeIds: ['store_abc', 'store_def']   ← Can join multiple stores
+└── lastStoreId: 'store_abc'               ← Last used store
+```
+
+**Store Selector (multi-store user):**
+```
+User has 2+ stores → Show store selector after login:
+┌─────────────────────────────┐
+│  🏪 Pilih Toko               │
+│                              │
+│  ┌────────────────────────┐ │
+│  │ 🏪 Toko Berkah Jaya    │ │
+│  │ 🔑 Super Admin         │ │
+│  │ [Masuk →]               │ │
+│  └────────────────────────┘ │
+│                              │
+│  ┌────────────────────────┐ │
+│  │ 🍽️ Warung Pak Joko     │ │
+│  │ 👔 Admin               │ │
+│  │ [Masuk →]               │ │
+│  └────────────────────────┘ │
+│                              │
+│  [+ Buat Toko Baru]         │
+└─────────────────────────────┘
+```
+
+**Firestore Security Rules:**
+```javascript
+// Only store members can read/write their own store data
+match /stores/{storeId}/{document=**} {
+  allow read, write: if request.auth.uid in
+    get(/databases/$(database)/documents/stores/$(storeId)).data.memberIds;
+}
+```
+
+#### [NEW] `src/pages/auth/StaffInvitationPage.tsx` — Staff Invitation System
+
+**Owner generates invitation:**
+```
+┌─────────────────────────────────┐
+│  📨 Undang Staff       🔑 Owner│
+│                                  │
+│  Nama:   [Ani              ]    │
+│  Role:   [💳 Kasir Senior  ] ▼  │
+│  Outlet: [Outlet Pusat     ] ▼  │
+│                                  │
+│  [ Generate Kode → ]            │
+│                                  │
+│  Kode: SKOK-A3F7-K9M2          │
+│  Berlaku: 7 hari                │
+│                                  │
+│  [📋 Copy] [📱 WA] [📧 Email] │
+└─────────────────────────────────┘
+```
+
+**Invitation Types:**
+
+| Type | Share Via | Expiry |
+|---|---|---|
+| 📋 Kode | Ketik manual di app | 7 hari |
+| 📱 WhatsApp | wa.me link | 7 hari |
+| 🔗 Deep Link | `skokpos.app/join/KODE` | 7 hari |
+| 📧 Email | Email invitation | 7 hari |
+| 📲 QR Code | Scan QR di app | 24 jam |
+
+**Invitation Security:**
+- Single-use (1 kode = 1 staff)
+- Expiry (default 7 hari, configurable)
+- Revocable (owner bisa batalkan)
+- Role-locked (staff tidak bisa ganti role sendiri)
+
+**Staff receives kode → Download app → Input kode → Register → Join store:**
+```
+Input SKOK-A3F7-K9M2 → Verify → Show store info + role
+→ Register (Phone/Google/Email) → Create PIN → Join! ✅
+```
+
+**Data Model:**
+```
+Invitation: { id, code, storeId, outletId, role, staffName,
+              createdBy, expiresAt, status, usedBy, usedAt }
+```
+
+#### [NEW] `src/lib/multiTenant/` — Multi-Tenant Service
+
+```typescript
+// src/lib/multiTenant/storeService.ts
+// - createStore(name, type, owner) → creates new store doc
+// - getMyStores(userId) → returns all stores user is member of
+// - switchStore(storeId) → sets active store context
+// - getActiveStore() → returns current store context
+```
+
+```typescript
+// src/lib/multiTenant/invitationService.ts
+// - generateInvitation(storeId, role, outletId, staffName) → returns code
+// - verifyInvitation(code) → returns invitation details
+// - acceptInvitation(code, userId) → adds user to store
+// - revokeInvitation(code) → cancels invitation
+// - getInvitations(storeId) → lists all invitations (active/used/expired)
+```
+
+#### [NEW] Pricing Plans (Optional — can add later)
+
+| Plan | Price | Staff | Outlets | AI | Features |
+|---|---|---|---|---|---|
+| 🆓 **Free** | Rp 0 | 3 | 1 | 50/month | Core POS, 1 printer |
+| ⭐ **Pro** | Rp 99K/bln | 10 | 3 | 500/month | + Delivery, Reports, Multi-printer |
+| 🏢 **Business** | Rp 299K/bln | ∞ | ∞ | ∞ | + Custom roles, API, Priority support |
+
+**Plan enforcement in `src/lib/multiTenant/planService.ts`:**
+- Check limits before adding staff/outlet
+- Soft limit: show upgrade prompt when approaching limit
+- Hard limit: block action when at limit
+- Grace period: 7 days after plan downgrade
+
+**File Structure:**
+```
+src/pages/auth/
+├── LandingPage.tsx           # Landing with 3 buttons
+├── RegisterPage.tsx          # Registration (Phone/Google/Email)
+├── LoginPage.tsx             # Login + PIN quick login
+├── ProfileSetup.tsx          # First-time profile completion
+├── StaffInvitationPage.tsx   # Staff enters invitation code
+└── StoreSelector.tsx         # Multi-store user picks store
+
+src/lib/auth/
+├── authService.ts            # Firebase Auth wrappers
+└── pinAuth.ts                # PIN quick login for kasir
+
+src/lib/multiTenant/
+├── storeService.ts           # Create/switch/list stores
+├── invitationService.ts      # Generate/verify/accept invitations
+└── planService.ts            # Pricing plan enforcement
+```
+
+**Complete App Flow:**
+```
+Download from Play Store / App Store
+         ↓
+Landing Page → [ Daftar / Masuk / Kode Undangan ]
+         ↓
+         ├── New Owner: Register → Profile → Setup Wizard → Dashboard
+         ├── Staff: Input Kode → Register → Create PIN → Dashboard (role-limited)
+         └── Returning: Login → Store Selector (if multi) → Dashboard
+```
+
 #### [NEW] `src/app/setup/page.jsx` — Setup Wizard (First-Time Only)
 Multi-step onboarding wizard shown on first launch:
 - **Step 1 — Kategori Toko**: Choose 🛒 Retail or 🍽️ Restoran (visual cards with icons & descriptions)
@@ -2205,3 +2430,8 @@ skokpos/
 81. ✅ **Online Image Search**: Search and pick product images from internet
 82. ✅ **AI Usage Dashboard**: Super Admin sees total calls, cost, per-user usage, trend, logs
 83. ✅ **AI Quota & Cost Control**: Daily/monthly limits, cost alerts, auto-disable, role-based access
+84. ✅ **Phone OTP Registration**: Primary auth for Indonesia (+62), Firebase Auth
+85. ✅ **Multi-Tenant Architecture**: Per-store data isolation, Firestore security rules, 1 user can join multiple stores
+86. ✅ **Staff Invitation System**: Code/WA/QR/Email, single-use, 7-day expiry, role-locked
+87. ✅ **PIN Quick Login**: 4-6 digit PIN for kasir at POS terminal, bcrypt hashed, 5 attempts lock
+88. ✅ **Pricing Plans (Optional)**: Free/Pro/Business tiers with staff and outlet limits
