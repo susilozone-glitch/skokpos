@@ -5,7 +5,7 @@
 
 | | |
 |---|---|
-| **Versi Dokumen** | 2.0 |
+| **Versi Dokumen** | 2.1 |
 | **Tanggal** | 3 Juni 2026 |
 | **Disiapkan Untuk** | Susilogiono |
 | **Nama Proyek** | SkokPOS |
@@ -97,6 +97,12 @@ Proyek ini dibagi menjadi **6 fase** dengan deliverables sebagai berikut:
 | 2.10 | Penomoran Pesanan | Format sekuensial: `INV-YYYYMMDD-NNNN` |
 | 2.11 | Data Multi-Outlet | Entitas toko/outlet dengan katalog produk, harga, dan inventaris independen |
 | 2.12 | Mode Toko Dinamis | UI adaptif berdasarkan mode toko (Retail/Restoran) — fitur restoran (modifier, meja, KDS) otomatis muncul/tersembunyi |
+| 2.13 | **Manajemen Shift (Buka/Tutup Kasir)** | Buka shift dengan modal awal, catat semua transaksi, tutup shift dengan hitung kas per pecahan uang, rekonsiliasi selisih, cetak laporan shift |
+| 2.14 | **Retur, Refund & Void** | Void transaksi (perlu approval Admin/Super Admin), retur barang (sebagian/penuh) dengan pilihan refund tunai/kredit toko/tukar, auto-update stok, log retur lengkap, batas waktu void konfigurabel |
+| 2.15 | **Bon / Hutang (Credit Sales)** | Checkout tanpa bayar ("Bayar Nanti") dicatat sebagai piutang pelanggan, bayar hutang sebagian/lunas, batas kredit per pelanggan, tanggal jatuh tempo, reminder hutang, riwayat pembayaran |
+| 2.16 | **Item Bebas / Open Price** | Tambah item tidak terdaftar di katalog dengan nama & harga manual langsung dari checkout |
+| 2.17 | **Produk Timbangan (per kg)** | Toggle per produk: "Jual per satuan" vs "Jual per kg". Input berat desimal: 2.5 kg × Rp 15.000 = Rp 37.500. Support: kg, gram, liter, meter |
+| 2.18 | **Harga Grosir / Multi-Price** | Harga satuan + harga grosir per produk. Auto-switch saat qty melebihi threshold (contoh: Indomie Rp 3.500/pcs, Rp 3.000/pcs jika ≥ 40 pcs). Optional: harga per tier pelanggan |
 
 **Fitur Khusus Restoran (🍽️)**:
 - Toggle tipe pesanan (Makan di Tempat / Bawa Pulang)
@@ -109,6 +115,11 @@ Proyek ini dibagi menjadi **6 fase** dengan deliverables sebagai berikut:
 - Pajak dihitung dengan benar untuk mode inklusif dan eksklusif
 - Split payment dengan 2+ metode berfungsi dengan benar
 - Pesanan yang ditahan bertahan meskipun halaman di-refresh
+- Shift harus dibuka sebelum transaksi pertama
+- Void hanya bisa dilakukan dalam batas waktu yang dikonfigurasi
+- Hutang tercatat dengan benar dan mengurangi batas kredit pelanggan
+- Harga grosir otomatis diterapkan saat qty mencapai threshold
+- Produk timbangan menampilkan input berat dan menghitung total yang benar
 - Fitur restoran tersembunyi saat mode Retail, dan sebaliknya
 
 ---
@@ -128,6 +139,8 @@ Proyek ini dibagi menjadi **6 fase** dengan deliverables sebagai berikut:
 | 3.7 | UI Setup Printer | Pencarian printer, manajemen koneksi, dan fungsi test print |
 | 3.8 | Auto-Print | Opsi cetak struk otomatis saat pesanan selesai |
 | 3.9 | Logo pada Struk | Logo toko tercetak di bagian atas struk (dikonversi ke bitmap ESC/POS) |
+| 3.10 | **Struk Digital via WhatsApp** | Setelah bayar, opsi "Kirim struk ke WhatsApp?" — membuka WhatsApp dengan teks struk terformat via wa.me API, termasuk nomor pesanan, item, total, pembayaran, info toko |
+| 3.11 | **Cetak Label Barcode** | Generate barcode (Code128/EAN13) untuk produk tanpa barcode, cetak sticker label pada printer thermal, label berisi: nama produk, harga, barcode. Batch print & custom ukuran (40×30mm, 50×25mm, 60×40mm) |
 
 **Contoh Template Struk:**
 
@@ -196,6 +209,8 @@ Kembali:            Rp  13.312
 - Tiket dapur tercetak dengan font besar dan mudah dibaca
 - Preview cetak akurat sesuai output cetak
 - Status koneksi printer terlihat di header aplikasi
+- Struk WhatsApp terkirim dengan format yang rapi
+- Label barcode tercetak dan dapat di-scan kembali
 
 ---
 
@@ -241,6 +256,9 @@ Kembali:            Rp  13.312
 | 5A.5 | Import/Ekspor Massal | Import dan ekspor data stok via CSV |
 | 5A.6 | Stok Multi-Outlet | Level stok independen per outlet |
 | 5A.7 | Ambang Batas Minimum | Stok minimum per produk (memicu smart reorder) |
+| 5A.8 | **Tanggal Kadaluarsa** | Input tanggal kadaluarsa per batch produk, alert 7/30 hari sebelum kadaluarsa, kode warna (🟢 OK / 🟡 Mendekati / 🔴 Kadaluarsa), FIFO enforcement, laporan write-off |
+| 5A.9 | **Produk Timbangan** | Toggle per produk: "Jual per satuan" vs "Jual per kg/gram/liter/meter", input berat desimal di checkout |
+| 5A.10 | **Harga Grosir / Multi-Price** | Set harga satuan + harga grosir + minimum qty per produk, auto-switch di checkout, optional harga per tier pelanggan |
 
 ##### 5B. Manajemen Vendor / Supplier
 
@@ -308,6 +326,35 @@ Suite laporan komprehensif dengan 8 kategori:
 - 📱 Share via WhatsApp (ringkasan harian)
 - 🧱 Cetak thermal (ringkasan akhir hari pada printer struk)
 
+**Laporan Tambahan:**
+
+| # | Kategori | Detail |
+|---|---|---|
+| 5F.9 | **Laporan Shift** | Ringkasan per shift (penjualan, refund, void, kas), selisih kas, riwayat shift per kasir |
+| 5F.10 | **Laporan Retur & Void** | Daftar retur/void dengan alasan, total refund per periode, produk paling sering di-retur |
+| 5F.11 | **Laporan Hutang (Bon)** | Total piutang outstanding, hutang per pelanggan, hutang jatuh tempo, pembayaran hutang per periode |
+| 5F.12 | **Laporan Kadaluarsa** | Produk mendekati kadaluarsa (7/30 hari), produk sudah kadaluarsa, nilai kerugian |
+
+##### 5F-bis. Laporan Otomatis / Scheduled Reports
+
+| # | Deliverable | Deskripsi |
+|---|---|---|
+| 5F.13 | Laporan Harian Otomatis | Auto-kirim ringkasan harian ke WhatsApp owner jam 22:00 |
+| 5F.14 | Laporan Mingguan | Ringkasan mingguan tiap Senin pagi |
+| 5F.15 | Konfigurasi | Super Admin pilih laporan mana yang dikirim otomatis |
+| 5F.16 | Format | Teks ringkas via WhatsApp API (wa.me) |
+
+##### 5F-ter. Activity Log / Audit Trail
+
+| # | Deliverable | Deskripsi |
+|---|---|---|
+| 5F.17 | Log Aktivitas | Log semua aktivitas: edit produk, hapus pesanan, ubah harga, void, retur, login/logout, perubahan settings |
+| 5F.18 | Filter | Filter per user, per tipe aksi, per tanggal |
+| 5F.19 | Immutable | Log tidak bisa dihapus atau diedit oleh siapapun |
+| 5F.20 | Detail | Siapa, apa, kapan, dari nilai apa ke nilai apa |
+| 5F.21 | Ekspor | Export ke CSV untuk audit |
+| 5F.22 | Akses | Hanya bisa dilihat oleh Super Admin & Admin |
+
 ##### 5G. Manajemen Karyawan
 
 | # | Deliverable | Deskripsi |
@@ -335,8 +382,14 @@ Suite laporan komprehensif dengan 8 kategori:
 | Buat & kelola PO | ✅ | ✅ | ❌ | ❌ | ❌ |
 | Terima barang | ✅ | ✅ | ❌ | ❌ | ❌ |
 | Stok opname | ✅ | ✅ | ❌ | ❌ | ❌ |
+| Activity log | ✅ | ✅ | ❌ | ❌ | ❌ |
+| Approve void/retur | ✅ | ✅ | ❌ | ❌ | ❌ |
+| Set batas kredit | ✅ | ❌ | ❌ | ❌ | ❌ |
 | Kelola pelanggan | ✅ | ✅ | ✅ | ❌ | ❌ |
 | Checkout / POS | ✅ | ❌ | ✅ | ❌ | ❌ |
+| Buka/tutup shift | ✅ | ❌ | ✅ | ❌ | ❌ |
+| Proses retur | ✅ | ✅ | ✅ | ❌ | ❌ |
+| Jual bon/hutang | ✅ | ❌ | ✅ | ❌ | ❌ |
 | Kitchen Display | ✅ | ❌ | ❌ | ✅ | ❌ |
 | Delivery Board | ✅ | ✅ | ✅ | ❌ | ❌ |
 | Driver View | ❌ | ❌ | ❌ | ❌ | ✅ |
@@ -409,6 +462,8 @@ Suite laporan komprehensif dengan 8 kategori:
 | 🌟 Modifier / Add-on | ❌ | ✅ | Picker modifier tersembunyi |
 | 📊 Laporan Lanjutan | ✅ | ✅ | Laporan lanjutan tersembunyi (dashboard tetap ada) |
 | 🔔 Smart Reorder | ✅ | ✅ | Saran restock otomatis dinonaktifkan |
+| 💰 Bon / Hutang | ✅ | ✅ | Fitur kredit penjualan dinonaktifkan |
+| 📋 Activity Log | ✅ | ✅ | Log audit tersembunyi |
 
 **Kriteria Penerimaan**:
 - Semua pengaturan tersimpan antar sesi
@@ -504,15 +559,19 @@ erDiagram
 ```
 Store:         { id, name, address, phone, logo, storeMode, taxRate, taxInclusive, language, createdAt }
 Outlet:        { id, storeId, name, address, storeMode, modules, isActive }
-Product:       { id, name, sku, barcode, categoryId, price, cost, image, variants[], modifiers[], isActive, stock, minStock, outletId, vendorId }
-Order:         { id, orderNumber, items[], subtotal, discount, tax, total, paymentMethod, status, cashierId, customerId, outletId, orderType, tableNumber, createdAt }
+Product:       { id, name, sku, barcode, categoryId, price, cost, wholesalePrice, wholesaleMinQty, unit, soldByWeight, expiryDate, image, variants[], modifiers[], isActive, stock, minStock, outletId, vendorId }
+Order:         { id, orderNumber, items[], subtotal, discount, tax, total, paymentMethod, status, cashierId, customerId, outletId, orderType, tableNumber, shiftId, isCredit, createdAt }
 Category:      { id, name, icon, color, sortOrder }
 Modifier:      { id, name, price, group, isRequired }
 Vendor:        { id, name, contactPerson, phone, email, address, notes, products[], isActive, outletId, createdAt }
 PurchaseOrder: { id, poNumber, vendorId, outletId, items[], status, subtotal, tax, total, notes, createdBy, createdAt, sentAt, receivedAt }
 POItem:        { productId, productName, qty, qtyReceived, unitPrice, subtotal }
 StockOpname:   { id, outletId, items[], status, countedBy, approvedBy, createdAt, completedAt }
-Customer:      { id, name, phone, email, tier, points, totalSpent, outletId, createdAt }
+Shift:         { id, outletId, cashierId, startingCash, actualCash, expectedCash, variance, status, startedAt, closedAt, notes }
+Return:        { id, orderId, items[], refundAmount, refundMethod, reason, approvedBy, createdBy, createdAt }
+Credit:        { id, customerId, orderId, amount, paidAmount, remainingAmount, status, dueDate, outletId, createdAt }
+ActivityLog:   { id, userId, action, target, details, outletId, timestamp }
+Customer:      { id, name, phone, email, tier, points, totalSpent, creditLimit, outletId, createdAt }
 Staff:         { id, name, phone, email, role, pin, isActive, outletId, createdAt }
 ```
 
@@ -547,12 +606,12 @@ Staff:         { id, name, phone, email, role, pin, isActive, outletId, createdA
 | Fase | Deskripsi | Estimasi Durasi |
 |---|---|---|
 | Fase 1 | Fondasi, Sistem Desain & Setup Wizard | 2-3 hari |
-| Fase 2 | POS Inti & Checkout | 3-4 hari |
-| Fase 3 | Cetak Struk Thermal | 1-2 hari |
+| Fase 2 | POS Inti, Checkout, **Shift, Retur/Void, Bon/Hutang, Multi-Price, Open Price, Timbangan** | 4-6 hari |
+| Fase 3 | Cetak Struk Thermal, **Struk WA, Label Barcode** | 2-3 hari |
 | Fase 4 | Pengiriman & Pelacakan Live | 2-3 hari |
-| Fase 5 | Inventaris, Vendor, PO, Stok Opname, Laporan, Karyawan, Pelanggan, KDS | 5-7 hari |
+| Fase 5 | Inventaris, **Kadaluarsa**, Vendor, PO, Stok Opname, **Activity Log, Laporan Otomatis**, Karyawan, Pelanggan, KDS | 6-8 hari |
 | Fase 6 | Pengaturan, Kelola Modul & Polish | 2-3 hari |
-| | **Total Estimasi** | **15-22 hari** |
+| | **Total Estimasi** | **18-26 hari** |
 
 > [!NOTE]
 > Estimasi timeline mengasumsikan sesi pengembangan terfokus. Durasi aktual dapat bervariasi berdasarkan siklus feedback, perubahan requirement, dan testing.
@@ -579,6 +638,16 @@ Proyek dianggap selesai ketika:
 12. ✅ Stok opname menampilkan perbandingan sistem vs fisik
 13. ✅ Smart reorder menghasilkan saran PO otomatis
 14. ✅ Module visibility (show/hide) berfungsi sesuai konfigurasi Super Admin
+15. ✅ Shift management (buka/tutup) dengan rekonsiliasi kas berfungsi
+16. ✅ Retur dan void berfungsi dengan approval dan auto-update stok
+17. ✅ Bon/hutang tercatat, batas kredit ditegakkan, pembayaran hutang berfungsi
+18. ✅ Harga grosir otomatis diterapkan saat qty threshold terpenuhi
+19. ✅ Item bebas dan produk timbangan dapat di-checkout dengan benar
+20. ✅ Struk digital terkirim via WhatsApp
+21. ✅ Label barcode dapat dicetak dan di-scan
+22. ✅ Produk kadaluarsa mendapat alert dan ditandai dengan kode warna
+23. ✅ Activity log mencatat semua perubahan secara immutable
+24. ✅ Laporan otomatis terkirim via WhatsApp sesuai jadwal
 
 ### 7.2 Tanda Tangan Persetujuan
 
@@ -600,4 +669,5 @@ Setiap perubahan terhadap ruang lingkup yang didefinisikan dalam SOW ini harus d
 ---
 
 *Dokumen dibuat pada 3 Juni 2026*
-*SkokPOS v2.0 — Kerangka Acuan Kerja / Statement of Work*
+*SkokPOS v2.1 — Kerangka Acuan Kerja / Statement of Work*
+

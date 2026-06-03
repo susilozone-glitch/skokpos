@@ -420,6 +420,7 @@ Multi-step onboarding wizard shown on first launch:
 - `productStore.js` — Product catalog with search/filter
 - `authStore.js` — User session and role
 - `settingsStore.js` — App settings (tax rate, currency, printer config, **storeMode**, active outlet)
+- `shiftStore.js` — **🆕** Shift management state (open/close, starting cash, transactions)
 
 #### [NEW] `src/app/(pos)/checkout/page.jsx` — Main POS Screen
 The heart of the app — split-screen layout:
@@ -430,6 +431,10 @@ The heart of the app — split-screen layout:
 - Real-time search with debounce
 - Quantity adjustment (+/−) in cart
 - Hold order / Recall order functionality
+- **🆕 Open Price / Custom Item**: Add item not in catalog with manual name & price
+- **🆕 Weight-based input**: Products sold per-kg show weight input (e.g., 2.5 kg)
+- **🆕 Multi-Price**: Auto-apply wholesale price when qty meets threshold
+- **🆕 Bon/Hutang**: "Bayar Nanti" button for credit sales to known customers
 - **🍽️ Restaurant only**: Order type toggle (Dine-in / Takeaway), table number input, modifier selection on product add
 
 #### [NEW] `src/app/(pos)/checkout/components/`
@@ -441,9 +446,39 @@ The heart of the app — split-screen layout:
 - `DiscountModal.jsx` — Apply percentage or fixed discount
 - `HeldOrdersDrawer.jsx` — View and recall held orders
 - `BarcodeInput.jsx` — Invisible input field for barcode scanner
+- `OpenPriceModal.jsx` — **🆕** Manual item entry (name + price) for uncatalogued items
+- `WeightInput.jsx` — **🆕** Numeric weight input with kg unit for weight-based products
+- `CreditSaleModal.jsx` — **🆕** Select customer → confirm bon/hutang sale
 - `OrderTypeSelector.jsx` — **🍽️ Restaurant only**: Dine-in / Takeaway toggle
 - `TableSelector.jsx` — **🍽️ Restaurant only**: Table number picker
 - `ModifierPicker.jsx` — **🍽️ Restaurant only**: Add-on/topping selection modal
+
+#### [NEW] `src/app/(pos)/shift/` — Shift Management (Buka/Tutup Kasir)
+- **Buka Shift**:
+  - Kasir input modal awal (starting cash)
+  - Record start time, kasir name
+  - Must open shift before first transaction
+- **Selama Shift**:
+  - Track all transactions (sales, refunds, voids)
+  - Running cash balance = starting cash + cash sales − cash refunds
+- **Tutup Shift**:
+  - Input actual cash count (per denomination: Rp 100.000, 50.000, 20.000, etc.)
+  - System vs actual comparison with variance
+  - Add notes for discrepancies
+  - Print shift summary on thermal printer
+- **Serah Terima**: Transfer shift to another kasir without closing store
+- **Shift History**: View past shifts with all details
+
+#### [NEW] `src/app/(pos)/returns/page.jsx` — Retur, Refund & Void
+- **Void Transaksi**: Cancel a recently completed transaction (requires Super Admin/Admin PIN approval)
+- **Retur Barang**:
+  - Search order by number or scan receipt barcode
+  - Select items to return (partial or full)
+  - Choose refund method: cash back, store credit, or exchange
+  - Auto-update inventory (returned stock added back)
+- **Retur Sebagian**: Return 1 of 5 items from an order
+- **Log Retur**: Complete history of all returns/voids with reason and approver
+- **Void time limit**: Configurable (e.g., void only within 15 minutes of sale)
 
 #### [NEW] `src/lib/firebase/` — Firebase Configuration
 - `config.js` — Firebase app initialization
@@ -454,15 +489,19 @@ The heart of the app — split-screen layout:
 #### [NEW] `src/lib/models/` — Data Models
 ```
 Store:         { id, name, address, phone, logo, storeMode, taxRate, taxInclusive, language, createdAt }
-Outlet:        { id, storeId, name, address, storeMode, isActive }
-Product:       { id, name, sku, barcode, categoryId, price, cost, image, variants[], modifiers[], isActive, stock, minStock, outletId, vendorId }
-Order:         { id, orderNumber, items[], subtotal, discount, tax, total, paymentMethod, status, cashierId, customerId, outletId, orderType, tableNumber, createdAt }
+Outlet:        { id, storeId, name, address, storeMode, modules, isActive }
+Product:       { id, name, sku, barcode, categoryId, price, cost, wholesalePrice, wholesaleMinQty, unit, soldByWeight, expiryDate, image, variants[], modifiers[], isActive, stock, minStock, outletId, vendorId }
+Order:         { id, orderNumber, items[], subtotal, discount, tax, total, paymentMethod, status, cashierId, customerId, outletId, orderType, tableNumber, shiftId, isCredit, createdAt }
 Category:      { id, name, icon, color, sortOrder }
 Modifier:      { id, name, price, group, isRequired }  // 🍽️ Restaurant only
 Vendor:        { id, name, contactPerson, phone, email, address, notes, products[], isActive, outletId, createdAt }
 PurchaseOrder: { id, poNumber, vendorId, outletId, items[], status, subtotal, tax, total, notes, createdBy, createdAt, sentAt, receivedAt }
 POItem:        { productId, productName, qty, qtyReceived, unitPrice, subtotal }
 StockOpname:   { id, outletId, items[], status, countedBy, approvedBy, createdAt, completedAt }
+Shift:         { id, outletId, cashierId, startingCash, actualCash, expectedCash, variance, status, startedAt, closedAt, notes }
+Return:        { id, orderId, items[], refundAmount, refundMethod, reason, approvedBy, createdBy, createdAt }
+Credit:        { id, customerId, orderId, amount, paidAmount, remainingAmount, status, dueDate, outletId, createdAt }
+ActivityLog:   { id, userId, action, target, details, outletId, timestamp }
 ```
 
 ---
@@ -539,6 +578,19 @@ StockOpname:   { id, outletId, items[], status, countedBy, approvedBy, createdAt
 - `PrintPreview.jsx` — On-screen receipt preview before printing
 - `PrinterStatus.jsx` — Connection indicator in header
 
+#### [NEW] Struk Digital via WhatsApp
+- After payment, option: "Kirim struk ke WhatsApp?"
+- Opens WhatsApp with pre-formatted receipt text (wa.me API)
+- Includes: order number, items, total, payment method, store info
+- Alternative: generate receipt as image and share
+
+#### [NEW] Cetak Label Barcode
+- Generate barcode (Code128/EAN13) for products without barcode
+- Print barcode sticker labels on thermal printer
+- Label includes: product name, price, barcode
+- Batch print: select multiple products → print all labels at once
+- Custom label size: 40×30mm, 50×25mm, 60×40mm
+
 ---
 
 ### Phase 4: Delivery Management & Live Tracking
@@ -588,6 +640,21 @@ StockOpname:   { id, outletId, items[], status, countedBy, approvedBy, createdAt
 - Stock history log (full audit trail)
 - Bulk import/export (CSV)
 - **Min stock threshold** per product (triggers smart reorder)
+- **🆕 Tanggal Kadaluarsa (Expiry Date)**:
+  - Input expiry date per product batch
+  - Alert: produk mendekati kadaluarsa (7 hari, 30 hari sebelum)
+  - Color-coded: 🟢 OK | 🟡 Mendekati kadaluarsa | 🔴 Sudah kadaluarsa
+  - FIFO enforcement: produk kadaluarsa terdekat dijual duluan
+  - Report: daftar produk kadaluarsa untuk write-off
+- **🆕 Produk Timbangan (Weight-based)**:
+  - Per product: toggle "Jual per satuan" vs "Jual per kg"
+  - Input berat di checkout: 2.5 kg × Rp 15.000 = Rp 37.500
+  - Support unit: kg, gram, liter, meter
+- **🆕 Harga Grosir / Multi-Price**:
+  - Per product: set harga satuan + harga grosir + minimum qty grosir
+  - Example: Indomie Rp 3.500/pcs, Rp 3.000/pcs jika beli ≥ 40 pcs
+  - Auto-switch price at checkout when qty threshold met
+  - Optional: harga per tier pelanggan (Regular/Silver/Gold/Platinum)
 
 #### [NEW] `src/app/(admin)/vendors/page.jsx` — Vendor / Supplier Management
 - Vendor list with search, filter by status (active/inactive)
@@ -699,6 +766,51 @@ Comprehensive reporting suite with date range picker and export options:
 - CSV / Excel
 - Share via WhatsApp (daily summary)
 - Thermal print (end-of-day summary on receipt printer)
+
+**🆕 Laporan Shift (Shift Reports):**
+- Ringkasan per shift: penjualan, refund, void, kas masuk/keluar
+- Selisih kas (expected vs actual)
+- Riwayat shift per kasir
+
+**🆕 Laporan Retur & Void:**
+- Daftar semua retur dan void dengan alasan
+- Total nilai refund per periode
+- Produk paling sering di-retur
+
+**🆕 Laporan Hutang (Credit/Bon):**
+- Total piutang outstanding
+- Hutang per pelanggan
+- Hutang jatuh tempo
+- Pembayaran hutang per periode
+
+**🆕 Laporan Kadaluarsa:**
+- Produk mendekati kadaluarsa (7/30 hari)
+- Produk sudah kadaluarsa (perlu write-off)
+- Nilai kerugian produk kadaluarsa
+
+#### [NEW] Laporan Otomatis / Scheduled Reports
+- **Laporan Harian Otomatis**: Auto-kirim ringkasan ke WhatsApp owner jam 22:00
+- **Laporan Mingguan**: Ringkasan mingguan tiap Senin pagi
+- **Konfigurasi**: Super Admin pilih laporan mana yang dikirim otomatis
+- **Format**: Teks ringkas via WhatsApp API (wa.me)
+
+#### [NEW] `src/app/(admin)/activity-log/page.jsx` — Activity Log / Audit Trail
+- Log semua aktivitas: edit produk, hapus pesanan, ubah harga, void, retur, login/logout, perubahan settings
+- Filter: per user, per tipe aksi, per tanggal
+- **Immutable**: Log tidak bisa dihapus atau diedit oleh siapapun
+- Detail: siapa, apa, kapan, dari nilai apa ke nilai apa
+- Export ke CSV untuk audit
+- Hanya bisa dilihat oleh Super Admin & Admin
+
+#### [NEW] `src/app/(pos)/credit/page.jsx` — Bon / Hutang (Credit Sales)
+- **Daftar Piutang**: Semua hutang pelanggan yang belum lunas
+- **Buat Hutang**: Saat checkout, pilih "Bayar Nanti" → linked ke pelanggan
+- **Bayar Hutang**: Pelanggan bayar sebagian atau lunas
+- **Batas Kredit**: Set limit hutang per pelanggan (configurable by Super Admin)
+- **Jatuh Tempo**: Set tanggal jatuh tempo per transaksi hutang
+- **Reminder**: Notifikasi hutang mendekati/melewati jatuh tempo
+- **Status**: Belum Bayar → Bayar Sebagian → Lunas
+- **Riwayat**: Riwayat pembayaran hutang per pelanggan
 
 #### [NEW] `src/app/(admin)/staff/page.jsx` — Staff Management
 - Staff list with roles and status
@@ -856,17 +968,21 @@ skokpos/
 │   │   ├── setup/             # 🆕 First-time setup wizard
 │   │   ├── (pos)/
 │   │   │   ├── checkout/      # Main POS checkout (mode-aware)
+│   │   │   ├── shift/         # 🆕 Shift management (open/close kasir)
+│   │   │   ├── returns/       # 🆕 Return, refund & void
+│   │   │   ├── credit/        # 🆕 Bon/hutang management
 │   │   │   ├── delivery/      # Delivery management
 │   │   │   └── kitchen/       # 🍽️ Kitchen Display System (restaurant only)
 │   │   ├── (admin)/
-│   │   │   ├── inventory/     # Inventory management
+│   │   │   ├── inventory/     # Inventory management + expiry tracking
 │   │   │   ├── vendors/       # 🆕 Vendor/supplier management
 │   │   │   ├── purchase-orders/ # 🆕 Purchase orders + goods receiving
 │   │   │   ├── stock-opname/  # 🆕 Physical stock count
-│   │   │   ├── reports/       # Analytics dashboard
+│   │   │   ├── reports/       # Analytics dashboard + scheduled reports
+│   │   │   ├── activity-log/  # 🆕 Audit trail / activity log
 │   │   │   ├── staff/         # Staff management
 │   │   │   ├── customers/     # Customer database
-│   │   │   └── settings/      # App settings + store mode switch
+│   │   │   └── settings/      # App settings + module visibility
 │   │   ├── (driver)/
 │   │   │   └── driver/        # Driver mobile view
 │   │   └── track/
@@ -876,7 +992,7 @@ skokpos/
 │   │   ├── layout/            # AppShell, Sidebar, Header
 │   │   ├── pos/               # POS-specific components
 │   │   ├── delivery/          # Delivery & tracking components
-│   │   ├── printer/           # Thermal print components
+│   │   ├── printer/           # Thermal print + barcode label components
 │   │   ├── setup/             # 🆕 Setup wizard components
 │   │   └── charts/            # Chart components
 │   ├── lib/
@@ -887,13 +1003,13 @@ skokpos/
 │   │   │   ├── en.json          #    🇬🇧 English
 │   │   │   ├── useTranslation.js #   React hook
 │   │   │   └── formatters.js    #    Number/date/currency formatters
-│   │   ├── printer/           # ESC/POS printing engine
+│   │   ├── printer/           # ESC/POS printing + barcode label engine
 │   │   ├── tracking/          # GPS & delivery tracking
 │   │   ├── models/            # Data models & validation
 │   │   ├── storeMode.js       # 🆕 Store mode engine & feature flags
 │   │   ├── utils.ts           # 🆕 cn() helper for Tailwind class merging
 │   │   └── hooks/             # Custom React hooks
-│   ├── stores/                # Zustand state stores
+│   ├── stores/                # Zustand state stores (incl. shiftStore)
 │   └── styles/                # Additional custom styles (if needed)
 ├── components.json            # 🆕 Shadcn/ui configuration
 ├── tailwind.config.ts         # 🆕 Tailwind CSS configuration (if needed for v4)
@@ -908,12 +1024,12 @@ skokpos/
 
 | Phase | Scope | Est. Effort |
 |---|---|---|
-| **Phase 1** | Project setup, design system, app shell, **setup wizard** | Foundation |
-| **Phase 2** | Product catalog, checkout, cart, payments, **mode-aware UI** | Core POS |
-| **Phase 3** | Thermal printing (ESC/POS, receipts, **mode-aware KOT**) | Printing |
+| **Phase 1** | Project setup, design system, app shell, **setup wizard**, i18n | Foundation |
+| **Phase 2** | Product catalog, checkout, cart, payments, **shift management, retur/void, bon/hutang, multi-price, open price, weight-based** | Core POS |
+| **Phase 3** | Thermal printing, receipts, **WA digital receipt, barcode label printing**, KOT | Printing |
 | **Phase 4** | Delivery board, live tracking, driver app, customer tracking | Delivery |
-| **Phase 5** | Inventory, **vendors, PO, goods receiving, stock opname**, reports, staff, customers, **KDS (restaurant)** | Management |
-| **Phase 6** | Settings, **store mode switch**, PWA optimization, final polish | Polish |
+| **Phase 5** | Inventory, **expiry tracking**, vendors, PO, stock opname, **activity log, scheduled reports**, staff, customers, KDS | Management |
+| **Phase 6** | Settings, **module visibility**, PWA optimization, final polish | Polish |
 
 > [!TIP]
 > I recommend building in this order so you can test the core POS flow (checkout → print receipt) as early as Phase 3, and add complexity progressively.
@@ -931,8 +1047,19 @@ skokpos/
 - **Setup Wizard**: Fresh load → complete setup as Retail → verify correct features visible
 - **Mode Switch**: Settings → change to Restaurant → verify modifiers, KDS, table number appear
 - **Checkout Flow**: Add products → apply discount → process payment → print receipt
+- **Shift Management**: Open shift → process sales → close shift → verify cash reconciliation
+- **Retur/Void**: Complete sale → void within time limit → verify stock returns and refund processed
+- **Bon/Hutang**: Checkout with "Bayar Nanti" → verify credit recorded → pay partial debt → verify balance update
+- **Multi-Price**: Add 40+ items → verify wholesale price auto-applied
+- **Open Price**: Add custom item → verify it appears in cart and receipt
+- **Weight Product**: Add product per kg → input 2.5 kg → verify total calculation
 - **Thermal Print**: Connect USB/Bluetooth printer → test print receipt (both modes)
-- **Delivery Tracking**: Create delivery order → open driver view → start tracking → verify live map updates on customer tracking page
+- **WA Receipt**: Complete sale → send receipt via WhatsApp → verify formatted text
+- **Barcode Label**: Generate barcode → print label → scan label → verify product found
+- **Expiry Tracking**: Add product with expiry → verify alerts at 30/7 days before
+- **Activity Log**: Perform various actions → verify all logged with correct details
+- **Scheduled Reports**: Configure daily report → verify WhatsApp delivery at set time
+- **Delivery Tracking**: Create delivery order → open driver view → start tracking → verify live map updates
 - **Offline Mode**: Disconnect WiFi → process sale → reconnect → verify data syncs to Firestore
 - **Responsive Design**: Test on tablet (POS), phone (driver), desktop (admin)
 - **PWA Install**: Install on Android via Chrome → verify works offline
@@ -949,10 +1076,26 @@ skokpos/
 5. ✅ **Split Payment**: Combine cash + card/e-wallet
 6. ✅ **Auto Tax Calculation**: Configurable inclusive/exclusive tax
 7. ✅ **Sequential Order Numbers**: INV-YYYYMMDD-NNNN format
-8. ✅ **End-of-Day Reports**: Automatic daily summary with cash reconciliation
-9. ✅ **Audit Trail**: Every transaction logged with timestamp and staff ID
-10. ✅ **PIN Quick Login**: Fast staff switching at the terminal
-11. ✅ **Customer Loyalty**: Points system for repeat customers
-12. ✅ **Kitchen Display**: Real-time order queue for kitchen staff
-13. ✅ **Multi-Role Access**: Each staff sees only what they need
-14. ✅ **Real-time Sync**: Changes sync across all connected devices instantly
+8. ✅ **Shift Management**: Open/close shift with cash reconciliation
+9. ✅ **Return & Refund**: Full and partial returns with inventory auto-update
+10. ✅ **Void Transaction**: Cancel sales with admin approval and time limit
+11. ✅ **Bon/Hutang (Credit Sales)**: Buy now pay later for trusted customers
+12. ✅ **Multi-Price / Wholesale**: Auto wholesale pricing at quantity thresholds
+13. ✅ **Open Price / Custom Item**: Sell uncatalogued items with manual entry
+14. ✅ **Weight-based Products**: Sell per kg/gram/liter with decimal quantities
+15. ✅ **WhatsApp Receipt**: Send digital receipt via WhatsApp
+16. ✅ **Barcode Label Printing**: Generate and print barcode stickers
+17. ✅ **Expiry Date Tracking**: FIFO enforcement with expiry alerts
+18. ✅ **Activity Log / Audit Trail**: Immutable log of all changes
+19. ✅ **Scheduled Reports**: Auto-send daily/weekly reports via WhatsApp
+20. ✅ **End-of-Day Reports**: Automatic daily summary with cash reconciliation
+21. ✅ **PIN Quick Login**: Fast staff switching at the terminal
+22. ✅ **Customer Loyalty**: Points system with tier-based benefits
+23. ✅ **Kitchen Display**: Real-time order queue for kitchen staff
+24. ✅ **Multi-Role Access (5 roles)**: Super Admin → Admin → Kasir → Dapur → Driver
+25. ✅ **Module Visibility**: Super Admin can show/hide modules per outlet
+26. ✅ **Real-time Sync**: Changes sync across all connected devices instantly
+27. ✅ **Multi-Language**: Bahasa Indonesia (default) + English
+28. ✅ **Vendor & Purchase Orders**: Full procurement cycle
+29. ✅ **Smart Reorder**: Auto-suggest PO when stock is low
+30. ✅ **Stock Opname**: Physical count with system reconciliation
