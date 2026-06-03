@@ -1011,6 +1011,139 @@ Comprehensive reporting suite with date range picker and export options:
 - **Konfigurasi**: Super Admin pilih laporan mana yang dikirim otomatis
 - **Format**: Teks ringkas via WhatsApp API (wa.me)
 
+#### [NEW] Dashboard KPI Real-time
+Real-time KPI cards yang auto-update setiap transaksi:
+
+| KPI Card | Value | Visual |
+|---|---|---|
+| Revenue Hari Ini | Rp 5.234.000 | Counter animasi, vs kemarin (+12%) |
+| Jumlah Transaksi | 47 orders | vs kemarin |
+| Rata-rata Order | Rp 111.362 | AOV (Average Order Value) |
+| Gross Profit | Rp 1.892.000 | Revenue − COGS |
+| Target vs Aktual | 75% | Progress bar animasi |
+| YoY Growth | +23% | vs bulan yang sama tahun lalu |
+| MoM Growth | +8% | vs bulan lalu |
+
+**Target System:**
+- Super Admin set target harian/bulanan per outlet
+- Progress bar di dashboard: hijau (≥100%), kuning (50-99%), merah (<50%)
+- Notifikasi saat target tercapai 🎉
+
+#### [NEW] Laporan Perbandingan (Comparison Reports)
+| Comparison | Description |
+|---|---|
+| Periode vs Periode | Minggu ini vs minggu lalu, bulan ini vs bulan lalu |
+| Outlet vs Outlet | Side-by-side perbandingan kinerja antar outlet |
+| Produk Growth | Produk mana yang naik / turun (bar chart +/−) |
+| Year over Year | Penjualan tahun ini vs tahun lalu (line chart overlay) |
+| Kasir vs Kasir | Perbandingan kinerja antar kasir |
+
+Visual: dual-axis line chart, stacked bar chart, delta indicators (▲ +12%, ▼ −5%)
+
+#### [NEW] Laporan Pembayaran (Payment Reports)
+| Report | Visual |
+|---|---|
+| Distribusi Metode Bayar | Pie/donut chart: % tunai vs QRIS vs kartu vs e-wallet |
+| Trend Cashless | Line chart: cashless ratio per minggu (makin naik?) |
+| Rekonsiliasi COD | Tabel: driver → uang COD terkumpul → sudah setor → belum setor |
+| Laporan DP (Uang Muka) | Daftar DP yang belum dilunasi, aging |
+| Laporan Tips (🍽️) | Total tips per kasir/hari, distribusi tips |
+| Voucher Usage | Voucher terpakai vs sisa, revenue impact, top vouchers |
+| Rounding Impact | Total pembulatan per periode (berapa uang yang "hilang" karena bulatkan ke bawah) |
+
+#### [NEW] Laporan Kerugian / Shrinkage Report
+```
+┌─────────────────────────────────────────────┐
+│  📉 LAPORAN KERUGIAN — Juni 2026            │
+│                                              │
+│  Selisih Stok Opname:     Rp    450.000     │
+│  Void & Retur:            Rp    280.000     │
+│  Produk Kadaluarsa:       Rp    320.000     │
+│  Total Diskon Diberikan:  Rp  1.200.000     │
+│  Pembulatan:              Rp     15.600     │
+│  ═══════════════════════════════════════     │
+│  TOTAL SHRINKAGE:         Rp  2.265.600     │
+│  (2.3% dari revenue)                        │
+│                                              │
+│  Benchmark: < 3% = BAIK ✅                  │
+│             3-5% = PERLU PERHATIAN ⚠️        │
+│             > 5% = KRITIS 🔴                │
+└─────────────────────────────────────────────┘
+```
+
+#### [NEW] Smart Alerts & Notifications
+Proactive alerts — owner tidak perlu cek manual:
+
+| Alert | Trigger | Action |
+|---|---|---|
+| 🎉 Target Tercapai | Revenue melewati target harian | Push notification + WA |
+| ⚠️ Revenue Drop | Revenue hari ini 30% lebih rendah dari rata-rata | Push notification |
+| 🔴 Best Seller Habis | Produk terlaris stok = 0 | Push + badge di sidebar |
+| 💰 Margin Alert | Produk dijual di bawah cost price | Badge di produk |
+| 🏦 Cash Variance | Selisih kas > Rp 50.000 saat tutup shift | Notifikasi ke admin |
+| ⏰ Expiry Alert | Produk kadaluarsa dalam 7 hari | Daily morning alert |
+| 📒 Hutang Jatuh Tempo | Hutang pelanggan sudah lewat due date | Alert + list |
+
+**Notification channels**: In-app toast, push notification (Capacitor), WhatsApp
+
+#### [NEW] ABC Analysis (Inventory Classification)
+Klasifikasi otomatis berdasarkan kontribusi revenue:
+
+| Class | Criteria | Action |
+|---|---|---|
+| **A** ⭐ | 20% produk = 80% revenue | Selalu ready stock, reorder tinggi |
+| **B** | 30% produk = 15% revenue | Stock level moderate |
+| **C** | 50% produk = 5% revenue | Evaluasi: pertahankan atau hapus? |
+
+- Auto-calculated dari data penjualan 30 hari terakhir
+- Visual: bar chart sorted by revenue contribution
+- Recommendation: "Produk X bisa dihapus, hanya 0.1% revenue"
+- Update otomatis setiap minggu
+
+#### [NEW] Laporan Pajak (Tax Report)
+Untuk keperluan pelaporan SPT:
+
+| Report | Description |
+|---|---|
+| PPN Terkumpul | Total PPN per bulan (Rp X dari Y transaksi) |
+| Service Charge | Total service charge terkumpul (restoran) |
+| Revenue Kena Pajak | Netto setelah diskon, sebelum pajak |
+| Rekap Pajak Bulanan | Tabel: bulan → revenue → PPN → service charge |
+| Export Pajak | CSV format siap import ke e-Faktur / e-SPT |
+
+#### [NEW] Owner Mobile Dashboard
+Optimized untuk pemilik usaha yang cek dari HP:
+
+| Feature | Description |
+|---|---|
+| Quick Stats Card | Revenue, orders, profit — swipe refresh |
+| Push Notification | "Revenue hari ini Rp 5.2 juta 🎉" jam 22:00 (Capacitor Push) |
+| Chart Mini | Sparkline chart 7 hari terakhir |
+| Compare Yesterday | Badge: ▲ +12% vs kemarin |
+| Multi-outlet Switcher | Quick switch antar outlet di HP |
+
+#### [NEW] Forecasting (Prediksi)
+Simple forecasting berdasarkan data historis:
+
+| Forecast | Method | Output |
+|---|---|---|
+| Prediksi Revenue | Moving average 30 hari | "Estimasi bulan depan: Rp 85 juta" |
+| Prediksi Stok Habis | Daily sales rate × current stock | "Indomie habis dalam 5 hari" |
+| Hari Terlaris | Historical day-of-week analysis | "Sabtu rata-rata 2× Senin" |
+| Jam Terlaris | Hourly heatmap analysis | "Peak: 11:30-13:00 dan 17:00-19:00" |
+| Seasonal Trend | Month-over-month pattern | "Desember biasanya +40% (Natal)" |
+
+#### [NEW] Export & Sharing Enhanced
+| Feature | Description |
+|---|---|
+| PDF Branded | Laporan PDF dengan logo toko, warna brand, header/footer |
+| CSV / Excel | Semua laporan bisa export ke CSV |
+| Google Sheets | Auto-push data ke Google Sheets (opsional, via Cloud Functions) |
+| Email Report | Kirim laporan via email selain WhatsApp |
+| Print A4 | Cetak laporan A4 dari browser (CSS @media print) |
+| Share Image | Screenshot chart → share ke WA/social media |
+| Scheduled Export | Auto-export laporan bulanan ke format tertentu |
+
 #### [NEW] `src/app/(admin)/activity-log/page.jsx` — Activity Log / Audit Trail
 - Log semua aktivitas: edit produk, hapus pesanan, ubah harga, void, retur, login/logout, perubahan settings
 - Filter: per user, per tipe aksi, per tanggal
@@ -1362,3 +1495,13 @@ skokpos/
 51. ✅ **Bank Transfer**: Manual confirmation with ref number
 52. ✅ **Change Denomination**: Breakdown kembalian per pecahan uang
 53. ✅ **10+ Payment Methods**: Cash, QRIS, Card, E-Wallet, Transfer, COD, Voucher, Store Credit, Points, DP
+54. ✅ **Dashboard KPI Real-time**: Revenue, orders, profit — auto-update every transaction
+55. ✅ **Comparison Reports**: Period vs period, outlet vs outlet, YoY growth
+56. ✅ **Payment Reports**: Method distribution, COD reconciliation, DP aging, tips, vouchers
+57. ✅ **Shrinkage / Loss Reports**: Total loss = stock variance + void + expired + discounts
+58. ✅ **Smart Alerts**: 7 proactive alerts (target reached, revenue drop, stock out, etc.)
+59. ✅ **ABC Analysis**: Inventory classified A/B/C by revenue contribution
+60. ✅ **Tax Reports**: PPN collected, service charge, revenue kena pajak — SPT-ready
+61. ✅ **Owner Mobile Dashboard**: Quick stats, push notifications, sparkline charts
+62. ✅ **Forecasting**: Predict revenue, stock depletion, peak hours/days
+63. ✅ **Export Enhanced**: PDF branded, Google Sheets, email, A4 print, share image

@@ -5,7 +5,7 @@
 
 | | |
 |---|---|
-| **Versi Dokumen** | 3.0 |
+| **Versi Dokumen** | 3.1 |
 | **Tanggal** | 3 Juni 2026 |
 | **Disiapkan Untuk** | Susilogiono |
 | **Nama Proyek** | SkokPOS |
@@ -345,7 +345,7 @@ Kembali:            Rp  13.312
 
 ##### 5F. Laporan & Analitik
 
-Suite laporan komprehensif dengan 8 kategori:
+Suite laporan komprehensif dengan 18 kategori:
 
 | # | Kategori Laporan | Detail |
 |---|---|---|
@@ -372,26 +372,36 @@ Suite laporan komprehensif dengan 8 kategori:
 | 5F.10 | **Laporan Retur & Void** | Daftar retur/void dengan alasan, total refund per periode, produk paling sering di-retur |
 | 5F.11 | **Laporan Hutang (Bon)** | Total piutang outstanding, hutang per pelanggan, hutang jatuh tempo, pembayaran hutang per periode |
 | 5F.12 | **Laporan Kadaluarsa** | Produk mendekati kadaluarsa (7/30 hari), produk sudah kadaluarsa, nilai kerugian |
+| 5F.13 | **Dashboard KPI Real-time** | Revenue hari ini (auto-update), jumlah transaksi, rata-rata order, gross profit, target vs aktual (progress bar), YoY/MoM growth comparison |
+| 5F.14 | **Laporan Perbandingan (Comparison)** | Periode vs periode (minggu/bulan/tahun), outlet vs outlet, produk naik/turun, year over year comparison |
+| 5F.15 | **Laporan Pembayaran** | Distribusi metode bayar (pie chart), trend cashless, rekonsiliasi COD driver, daftar DP belum lunas, laporan tips (restoran), voucher usage |
+| 5F.16 | **Laporan Kerugian / Shrinkage** | Selisih stok opname, void & retur value, expired write-off, total diskon, formula: total shrinkage = selisih + void + expired + diskon |
+| 5F.17 | **Smart Alerts & Notifikasi** | Target harian tercapai 🎉, revenue drop alert ⚠️, produk terlaris habis, margin alert (dijual di bawah cost), cash variance alert |
+| 5F.18 | **ABC Analysis (Klasifikasi Inventaris)** | Klasifikasi produk: A (20% produk = 80% revenue), B (30% = 15%), C (50% = 5%). Rekomendasi stok berdasarkan kelas |
+| 5F.19 | **Laporan Pajak** | PPN terkumpul per bulan (untuk SPT), service charge terkumpul, revenue kena pajak, rekap pajak bulanan |
+| 5F.20 | **Owner Mobile Dashboard** | Widget ringkasan revenue di HP, push notification jam 22:00, quick stats dengan swipe-down refresh |
+| 5F.21 | **Forecasting (Prediksi)** | Prediksi revenue bulan depan, prediksi stok habis (hari), hari terlaris, jam terlaris — semua berdasarkan data 30 hari terakhir |
+| 5F.22 | **Export & Sharing Enhanced** | PDF branded (logo + warna toko), Google Sheets export, kirim laporan via email, cetak laporan A4 dari browser |
 
 ##### 5F-bis. Laporan Otomatis / Scheduled Reports
 
 | # | Deliverable | Deskripsi |
 |---|---|---|
-| 5F.13 | Laporan Harian Otomatis | Auto-kirim ringkasan harian ke WhatsApp owner jam 22:00 |
-| 5F.14 | Laporan Mingguan | Ringkasan mingguan tiap Senin pagi |
-| 5F.15 | Konfigurasi | Super Admin pilih laporan mana yang dikirim otomatis |
-| 5F.16 | Format | Teks ringkas via WhatsApp API (wa.me) |
+| 5F.23 | Laporan Harian Otomatis | Auto-kirim ringkasan harian ke WhatsApp owner jam 22:00 |
+| 5F.24 | Laporan Mingguan | Ringkasan mingguan tiap Senin pagi |
+| 5F.25 | Konfigurasi | Super Admin pilih laporan mana yang dikirim otomatis |
+| 5F.26 | Format | Teks ringkas via WhatsApp API (wa.me) |
 
 ##### 5F-ter. Activity Log / Audit Trail
 
 | # | Deliverable | Deskripsi |
 |---|---|---|
-| 5F.17 | Log Aktivitas | Log semua aktivitas: edit produk, hapus pesanan, ubah harga, void, retur, login/logout, perubahan settings |
-| 5F.18 | Filter | Filter per user, per tipe aksi, per tanggal |
-| 5F.19 | Immutable | Log tidak bisa dihapus atau diedit oleh siapapun |
-| 5F.20 | Detail | Siapa, apa, kapan, dari nilai apa ke nilai apa |
-| 5F.21 | Ekspor | Export ke CSV untuk audit |
-| 5F.22 | Akses | Hanya bisa dilihat oleh Super Admin & Admin |
+| 5F.27 | Log Aktivitas | Log semua aktivitas: edit produk, hapus pesanan, ubah harga, void, retur, login/logout, perubahan settings |
+| 5F.28 | Filter | Filter per user, per tipe aksi, per tanggal |
+| 5F.29 | Immutable | Log tidak bisa dihapus atau diedit oleh siapapun |
+| 5F.30 | Detail | Siapa, apa, kapan, dari nilai apa ke nilai apa |
+| 5F.31 | Ekspor | Export ke CSV untuk audit |
+| 5F.32 | Akses | Hanya bisa dilihat oleh Super Admin & Admin |
 
 ##### 5G. Manajemen Karyawan
 
@@ -469,6 +479,10 @@ Suite laporan komprehensif dengan 8 kategori:
 - Login PIN selesai dalam waktu kurang dari 2 detik
 - KDS menerima pesanan baru dalam 3 detik setelah checkout
 - Poin loyalitas dihitung dengan benar dan dapat digunakan sebagai diskon
+- Dashboard KPI menampilkan data real-time
+- Laporan perbandingan antar periode berfungsi
+- Smart alerts memicu notifikasi secara otomatis
+- ABC analysis mengklasifikasikan produk dengan benar
 
 ---
 
@@ -705,6 +719,10 @@ Proyek dianggap selesai ketika:
 32. ✅ Voucher dan store credit dapat digunakan sebagai pembayaran
 33. ✅ App ter-build sebagai Android APK dan iOS IPA
 34. ✅ Native features (kamera, GPS background, barcode scanner) berfungsi
+35. ✅ Dashboard KPI menampilkan data penjualan real-time
+36. ✅ Laporan perbandingan antar periode dan outlet berfungsi
+37. ✅ Laporan kerugian (shrinkage) menghitung total loss
+38. ✅ Smart alerts mengirim notifikasi otomatis ke owner
 
 ### 7.2 Tanda Tangan Persetujuan
 
@@ -726,5 +744,5 @@ Setiap perubahan terhadap ruang lingkup yang didefinisikan dalam SOW ini harus d
 ---
 
 *Dokumen dibuat pada 3 Juni 2026*
-*SkokPOS v3.0 — Kerangka Acuan Kerja / Statement of Work*
+*SkokPOS v3.1 — Kerangka Acuan Kerja / Statement of Work*
 
