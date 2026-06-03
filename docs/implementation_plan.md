@@ -435,23 +435,107 @@ The heart of the app — split-screen layout:
 - **🆕 Weight-based input**: Products sold per-kg show weight input (e.g., 2.5 kg)
 - **🆕 Multi-Price**: Auto-apply wholesale price when qty meets threshold
 - **🆕 Bon/Hutang**: "Bayar Nanti" button for credit sales to known customers
-- **🍽️ Restaurant only**: Order type toggle (Dine-in / Takeaway), table number input, modifier selection on product add
+- **🆕 Rounding**: Auto-round total to nearest Rp 100/500/1.000 (configurable)
+- **🆕 Service Charge**: 🍽️ Restaurant: auto-add 5-10% service charge (separate from tax)
+- **🍽️ Restaurant only**: Order type toggle (Dine-in / Takeaway / Delivery), table number input, modifier selection on product add
+
+#### Cart Summary Display:
+```
+  Subtotal:           Rp  86.000
+  Diskon (10%):      -Rp   8.600
+  Service Charge (5%): Rp  3.870  ← 🍽️ Restoran only
+  Ongkir:             Rp 10.000  ← Jika delivery
+  PPN (12%):          Rp  9.752
+  Pembulatan:        -Rp     22  ← Auto-round
+  ══════════════════════════════
+  TOTAL:              Rp 101.000
+```
 
 #### [NEW] `src/app/(pos)/checkout/components/`
 - `ProductGrid.jsx` — Responsive product grid with category filtering
 - `ProductCard.jsx` — Individual product card with variant/modifier support
-- `CartPanel.jsx` — Shopping cart with line items
+- `CartPanel.jsx` — Shopping cart with line items + rounding + service charge
 - `CartItem.jsx` — Single cart item with qty controls
-- `PaymentModal.jsx` — Payment method selection and processing
+- `PaymentModal.jsx` — Payment method selection (Cash, QRIS, Card, E-Wallet, Transfer, COD, Voucher)
 - `DiscountModal.jsx` — Apply percentage or fixed discount
 - `HeldOrdersDrawer.jsx` — View and recall held orders
 - `BarcodeInput.jsx` — Invisible input field for barcode scanner
 - `OpenPriceModal.jsx` — **🆕** Manual item entry (name + price) for uncatalogued items
 - `WeightInput.jsx` — **🆕** Numeric weight input with kg unit for weight-based products
 - `CreditSaleModal.jsx` — **🆕** Select customer → confirm bon/hutang sale
-- `OrderTypeSelector.jsx` — **🍽️ Restaurant only**: Dine-in / Takeaway toggle
+- `QRISDisplay.jsx` — **🆕** Display QRIS QR code for customer to scan
+- `QuickCashButtons.jsx` — **🆕** Preset cash amounts: Uang Pas, 50K, 100K, 200K, 500K
+- `ChangeDenomination.jsx` — **🆕** Breakdown kembalian per pecahan uang
+- `VoucherInput.jsx` — **🆕** Input voucher code or redeem store credit/loyalty points
+- `TipSelector.jsx` — **🆕** 🍽️ Optional tip: 5%, 10%, 15%, or custom amount
+- `DPModal.jsx` — **🆕** Down payment partial payment with remaining balance tracking
+- `PaymentRefInput.jsx` — **🆕** Reference number input for non-cash payments
+- `BankTransferInfo.jsx` — **🆕** Show bank account details for transfer payment
+- `OrderTypeSelector.jsx` — Dine-in / Takeaway / **🆕 Delivery** toggle
 - `TableSelector.jsx` — **🍽️ Restaurant only**: Table number picker
 - `ModifierPicker.jsx` — **🍽️ Restaurant only**: Add-on/topping selection modal
+
+#### [NEW] Payment System Architecture
+
+**Payment Methods:**
+
+| Method | Icon | Tersedia | Ref # | Laci Kas |
+|---|---|---|---|---|
+| 💵 Tunai | Cash | Selalu | ❌ | ✅ Auto-open |
+| 📱 QRIS | QR | Selalu | ✅ Auto | ❌ |
+| 💳 Kartu Debit/Kredit | Card | Selalu | ✅ Required | ❌ |
+| 📲 E-Wallet (GoPay/OVO/DANA) | Wallet | Selalu | ✅ Optional | ❌ |
+| 🏦 Transfer Bank | Bank | Selalu | ✅ Required | ❌ |
+| 📒 COD | Delivery | Hanya Delivery | ❌ | ❌ |
+| 🎁 Voucher | Coupon | Jika ada voucher | ✅ Code | ❌ |
+| 💎 Store Credit | Credit | Jika saldo > 0 | ❌ | ❌ |
+| ⭐ Loyalty Points | Points | Jika poin > 0 | ❌ | ❌ |
+| 💰 Uang Muka (DP) | DP | Selalu | ❌ | Depends |
+
+**QRIS System:**
+- Static QRIS: QR tetap yang bisa dicetak & tempel di kasir
+- Dynamic QRIS: QR per transaksi dengan nominal tertanam
+- Display QR di layar POS untuk customer scan
+- Logo toko di tengah QR code
+- Kasir konfirmasi "Sudah dibayar" (mock — real gateway di fase berikutnya)
+
+**Quick Cash Flow:**
+```
+  Total: Rp 33.000
+  ┌────────────┬────────────┐
+  │ ✅ Uang Pas │ Rp 50.000  │
+  ├────────────┼────────────┤
+  │ Rp 100.000 │ Rp 200.000 │
+  ├────────────┴────────────┤
+  │   Manual: [________]    │
+  ├─────────────────────────┤
+  │  Kembalian: Rp 17.000   │
+  │  = 1×10.000 + 1×5.000   │
+  │    + 1×2.000             │
+  └─────────────────────────┘
+```
+
+**Rounding Configuration:**
+
+| Setting | Contoh (Total: Rp 33.040) | Result |
+|---|---|---|
+| Off | Rp 33.040 | No change |
+| Ke Rp 100 (bawah) | Rp 33.000 | -Rp 40 |
+| Ke Rp 100 (terdekat) | Rp 33.000 | -Rp 40 |
+| Ke Rp 500 (bawah) | Rp 33.000 | -Rp 40 |
+| Ke Rp 1.000 (bawah) | Rp 33.000 | -Rp 40 |
+
+**Down Payment (DP) Flow:**
+1. Checkout → pilih "Bayar DP" → set persentase (50%) atau nominal
+2. Bayar DP dengan metode apapun (tunai/QRIS/kartu)
+3. Order status: "DP Dibayar" → pesanan disiapkan
+4. Pelunasan: customer datang / delivery → bayar sisa
+5. Struk DP + Struk Pelunasan dicetak terpisah
+
+**Cash Drawer:**
+- Auto-open via ESC/POS command saat pembayaran tunai selesai
+- Manual open: tombol "Buka Laci" (PIN admin required)
+- Log setiap pembukaan laci di activity log
 
 #### [NEW] `src/app/(pos)/shift/` — Shift Management (Buka/Tutup Kasir)
 - **Buka Shift**:
@@ -491,7 +575,8 @@ The heart of the app — split-screen layout:
 Store:         { id, name, address, phone, logo, storeMode, taxRate, taxInclusive, language, createdAt }
 Outlet:        { id, storeId, name, address, storeMode, modules, isActive }
 Product:       { id, name, sku, barcode, categoryId, price, cost, wholesalePrice, wholesaleMinQty, unit, soldByWeight, expiryDate, image, variants[], modifiers[], isActive, stock, minStock, outletId, vendorId }
-Order:         { id, orderNumber, items[], subtotal, discount, tax, deliveryFee, total, paymentMethod, status, cashierId, customerId, outletId, orderType, tableNumber, shiftId, isCredit, isCOD, deliveryAddressId, deliveryNotes, scheduledTime, createdAt }
+Order:         { id, orderNumber, items[], subtotal, discount, serviceCharge, tax, deliveryFee, rounding, tip, total, payments[], status, cashierId, customerId, outletId, orderType, tableNumber, shiftId, isCredit, isCOD, dpAmount, dpPaid, deliveryAddressId, deliveryNotes, scheduledTime, createdAt }
+Payment:       { id, orderId, method, amount, refNumber, bankName, voucherCode, pointsUsed, status, createdAt }
 Category:      { id, name, icon, color, sortOrder }
 Modifier:      { id, name, price, group, isRequired }  // 🍽️ Restaurant only
 Vendor:        { id, name, contactPerson, phone, email, address, notes, products[], isActive, outletId, createdAt }
@@ -502,6 +587,8 @@ Shift:         { id, outletId, cashierId, startingCash, actualCash, expectedCash
 Return:        { id, orderId, items[], refundAmount, refundMethod, reason, approvedBy, createdBy, createdAt }
 Credit:        { id, customerId, orderId, amount, paidAmount, remainingAmount, status, dueDate, outletId, createdAt }
 ActivityLog:   { id, userId, action, target, details, outletId, timestamp }
+Voucher:       { id, code, type, value, minOrder, maxUses, usedCount, validUntil, outletId, isActive }
+StoreCredit:   { id, customerId, balance, transactions[], outletId, createdAt }
 DeliveryAddress: { id, customerId, label, address, lat, lng, notes }
 Delivery:      { id, orderId, driverId, status, attempts, codAmount, codCollected, codSettled, proofPhotoUrl, proofNotes, failReason, zoneId, fee, assignedAt, pickedUpAt, deliveredAt, failedAt }
 DeliveryZone:  { id, outletId, name, type, coordinates, fee, isActive }
@@ -1137,7 +1224,7 @@ skokpos/
 | Phase | Scope | Est. Effort |
 |---|---|---|
 | **Phase 1** | Project setup, design system, app shell, **setup wizard**, i18n | Foundation |
-| **Phase 2** | Product catalog, checkout, cart, payments, **shift, retur/void, bon/hutang, multi-price, open price, weight-based** | Core POS |
+| **Phase 2** | Product catalog, checkout, **QRIS, quick cash, rounding, service charge, voucher, DP, tips, bank transfer, cash drawer**, shift, retur/void, bon/hutang, multi-price, open price, weight-based | Core POS |
 | **Phase 3** | Thermal printing, receipts, **WA digital receipt, barcode label printing**, KOT | Printing |
 | **Phase 4** | Delivery board, live tracking, driver app, **ongkir, COD, WA notif, POD, zones, batch, auto-assign** | Delivery |
 | **Phase 5** | Inventory, **expiry tracking**, vendors, PO, stock opname, **activity log, scheduled reports**, staff, customers, KDS | Management |
@@ -1165,6 +1252,14 @@ skokpos/
 - **Multi-Price**: Add 40+ items → verify wholesale price auto-applied
 - **Open Price**: Add custom item → verify it appears in cart and receipt
 - **Weight Product**: Add product per kg → input 2.5 kg → verify total calculation
+- **QRIS Payment**: Display QR → scan → confirm → verify order completes
+- **Quick Cash**: Tap Rp 100.000 button → verify change calculated correctly
+- **Rounding**: Set rounding to Rp 100 → process sale → verify rounded total on receipt
+- **Service Charge**: Switch to Restaurant mode → verify 5% charge added and separate from tax
+- **Voucher**: Create voucher → apply at checkout → verify discount applied
+- **Down Payment**: Pay 50% DP → verify partial payment recorded → pay remaining
+- **Cash Drawer**: Process cash sale → verify drawer open command sent
+- **Split Payment**: Pay with QRIS + Cash → verify both recorded with ref numbers
 - **Thermal Print**: Connect USB/Bluetooth printer → test print receipt (both modes)
 - **WA Receipt**: Complete sale → send receipt via WhatsApp → verify formatted text
 - **Barcode Label**: Generate barcode → print label → scan label → verify product found
@@ -1230,3 +1325,15 @@ skokpos/
 39. ✅ **Scheduled Delivery**: Time slot selection for future delivery
 40. ✅ **Auto-Assign Driver**: Nearest online driver auto-assignment
 41. ✅ **Delivery Zones**: Configurable radius & polygon zones
+42. ✅ **QRIS Payment**: QR Indonesia Standard (static & dynamic)
+43. ✅ **Quick Cash Buttons**: Preset denominations for fast cash input
+44. ✅ **Rounding / Pembulatan**: Auto-round totals to nearest Rp 100/500/1.000
+45. ✅ **Payment Reference Numbers**: Audit trail for non-cash payments
+46. ✅ **Service Charge**: Restaurant 5-10% (separate from tax)
+47. ✅ **Voucher & Store Credit**: Coupon codes + store credit from returns
+48. ✅ **Down Payment / DP**: Partial payment with remaining balance
+49. ✅ **Cash Drawer Integration**: Auto-open on cash payment
+50. ✅ **Tips / Gratuity**: Optional tip for restaurant orders
+51. ✅ **Bank Transfer**: Manual confirmation with ref number
+52. ✅ **Change Denomination**: Breakdown kembalian per pecahan uang
+53. ✅ **10+ Payment Methods**: Cash, QRIS, Card, E-Wallet, Transfer, COD, Voucher, Store Credit, Points, DP

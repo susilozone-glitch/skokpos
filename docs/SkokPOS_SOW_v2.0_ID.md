@@ -5,7 +5,7 @@
 
 | | |
 |---|---|
-| **Versi Dokumen** | 2.2 |
+| **Versi Dokumen** | 2.3 |
 | **Tanggal** | 3 Juni 2026 |
 | **Disiapkan Untuk** | Susilogiono |
 | **Nama Proyek** | SkokPOS |
@@ -103,6 +103,18 @@ Proyek ini dibagi menjadi **6 fase** dengan deliverables sebagai berikut:
 | 2.16 | **Item Bebas / Open Price** | Tambah item tidak terdaftar di katalog dengan nama & harga manual langsung dari checkout |
 | 2.17 | **Produk Timbangan (per kg)** | Toggle per produk: "Jual per satuan" vs "Jual per kg". Input berat desimal: 2.5 kg × Rp 15.000 = Rp 37.500. Support: kg, gram, liter, meter |
 | 2.18 | **Harga Grosir / Multi-Price** | Harga satuan + harga grosir per produk. Auto-switch saat qty melebihi threshold (contoh: Indomie Rp 3.500/pcs, Rp 3.000/pcs jika ≥ 40 pcs). Optional: harga per tier pelanggan |
+| 2.19 | **QRIS (QR Indonesia Standard)** | Generate QR QRIS di layar untuk customer scan, static QRIS cetak & tempel, dynamic QRIS per transaksi dengan nominal, konfirmasi manual kasir, logo toko di QR |
+| 2.20 | **Quick Cash Buttons** | Tombol preset: Uang Pas, Rp 50.000, Rp 100.000, Rp 200.000, Rp 500.000. Smart suggestion nominal terdekat di atas total. Tetap bisa input manual |
+| 2.21 | **Pembulatan (Rounding)** | Bulatkan total ke Rp 100/500/1.000 terdekat. Konfigurabel: off, ke bawah, ke atas, terdekat. Tampil di struk sebagai line item |
+| 2.22 | **Nomor Referensi Pembayaran** | Input ref number untuk pembayaran kartu/e-wallet/QRIS/transfer. Tersimpan bersama transaksi, searchable, tercetak di struk |
+| 2.23 | **Service Charge (Restoran)** | Biaya pelayanan 5-10% (konfigurabel), terpisah dari PPN di struk, otomatis aktif di mode Restoran |
+| 2.24 | **Voucher & Store Credit** | Input kode voucher untuk potongan harga, store credit dari retur, tukar poin loyalitas, bisa dikombinasi dengan metode bayar lain |
+| 2.25 | **Uang Muka / Down Payment (DP)** | Bayar sebagian di awal (contoh 50%), sisa dibayar saat ambil/kirim (termasuk COD), status DP Dibayar → Siap → Lunas, struk DP + struk pelunasan |
+| 2.26 | **Cash Drawer Integration** | Laci kas auto-open saat pembayaran tunai via ESC/POS command, manual open dengan PIN admin, log setiap pembukaan di activity log |
+| 2.27 | **Tips / Gratifikasi (Restoran)** | Pelanggan bisa tambah tip opsional, preset 5%/10%/15% atau nominal custom, laporan tips per kasir/hari |
+| 2.28 | **Transfer Bank** | Pilih bank (BCA/Mandiri/BNI/BRI), tampilkan nomor rekening toko, konfirmasi manual kasir, input ref number |
+| 2.29 | **Pecahan Kembalian** | Breakdown kembalian: Rp 16.960 = 1×Rp10.000 + 1×Rp5.000 + 1×Rp2.000, visual pecahan uang |
+| 2.30 | **COD sebagai Payment Method** | COD muncul sebagai opsi bayar hanya saat tipe order = Delivery, QRIS driver untuk cashless COD, jumlah tagih tampil di driver view |
 
 **Fitur Khusus Restoran (🍽️)**:
 - Toggle tipe pesanan (Makan di Tempat / Bawa Pulang)
@@ -121,6 +133,10 @@ Proyek ini dibagi menjadi **6 fase** dengan deliverables sebagai berikut:
 - Harga grosir otomatis diterapkan saat qty mencapai threshold
 - Produk timbangan menampilkan input berat dan menghitung total yang benar
 - Fitur restoran tersembunyi saat mode Retail, dan sebaliknya
+- QRIS QR code tampil di layar dan bisa di-scan
+- Quick cash buttons mempercepat input tunai
+- Pembulatan diterapkan dan tampil di struk
+- Service charge otomatis aktif di mode Restoran
 
 ---
 
@@ -583,7 +599,8 @@ erDiagram
 Store:         { id, name, address, phone, logo, storeMode, taxRate, taxInclusive, language, createdAt }
 Outlet:        { id, storeId, name, address, storeMode, modules, isActive }
 Product:       { id, name, sku, barcode, categoryId, price, cost, wholesalePrice, wholesaleMinQty, unit, soldByWeight, expiryDate, image, variants[], modifiers[], isActive, stock, minStock, outletId, vendorId }
-Order:         { id, orderNumber, items[], subtotal, discount, tax, total, deliveryFee, paymentMethod, status, cashierId, customerId, outletId, orderType, tableNumber, shiftId, isCredit, isCOD, deliveryAddress, deliveryNotes, createdAt }
+Order:         { id, orderNumber, items[], subtotal, discount, tax, total, deliveryFee, serviceCharge, tip, rounding, paymentRef, dpAmount, dpPaid, paymentMethod, status, cashierId, customerId, outletId, orderType, tableNumber, shiftId, isCredit, isCOD, deliveryAddress, deliveryNotes, createdAt }
+Voucher:       { id, code, type, value, minOrder, maxUses, usedCount, validUntil, outletId, isActive }
 Category:      { id, name, icon, color, sortOrder }
 Modifier:      { id, name, price, group, isRequired }
 Vendor:        { id, name, contactPerson, phone, email, address, notes, products[], isActive, outletId, createdAt }
@@ -630,12 +647,12 @@ Staff:         { id, name, phone, email, role, pin, isActive, outletId, createdA
 | Fase | Deskripsi | Estimasi Durasi |
 |---|---|---|
 | Fase 1 | Fondasi, Sistem Desain & Setup Wizard | 2-3 hari |
-| Fase 2 | POS Inti, Checkout, **Shift, Retur/Void, Bon/Hutang, Multi-Price, Open Price, Timbangan** | 4-6 hari |
+| Fase 2 | POS Inti, Checkout, **Shift, Retur/Void, Bon/Hutang, Multi-Price, Open Price, Timbangan** | 5-7 hari |
 | Fase 3 | Cetak Struk Thermal, **Struk WA, Label Barcode** | 2-3 hari |
 | Fase 4 | Pengiriman & Pelacakan Live, **Ongkir, COD, WhatsApp, Proof of Delivery, Auto-Assign, Zona** | 3-5 hari |
 | Fase 5 | Inventaris, **Kadaluarsa**, Vendor, PO, Stok Opname, **Activity Log, Laporan Otomatis**, Karyawan, Pelanggan, KDS | 6-8 hari |
 | Fase 6 | Pengaturan, Kelola Modul & Polish | 2-3 hari |
-| | **Total Estimasi** | **19-28 hari** |
+| | **Total Estimasi** | **20-30 hari** |
 
 > [!NOTE]
 > Estimasi timeline mengasumsikan sesi pengembangan terfokus. Durasi aktual dapat bervariasi berdasarkan siklus feedback, perubahan requirement, dan testing.
@@ -676,6 +693,10 @@ Proyek dianggap selesai ketika:
 26. ✅ COD tracking dan rekonsiliasi kas driver berfungsi
 27. ✅ Notifikasi WhatsApp terkirim otomatis ke pelanggan
 28. ✅ Bukti pengiriman (foto) tersimpan dan bisa dilihat
+29. ✅ QRIS menampilkan QR code dan bisa digunakan untuk pembayaran
+30. ✅ Pembulatan diterapkan dengan benar dan tampil di struk
+31. ✅ Service charge aktif di mode Restoran dan terpisah dari PPN
+32. ✅ Voucher dan store credit dapat digunakan sebagai pembayaran
 
 ### 7.2 Tanda Tangan Persetujuan
 
@@ -697,5 +718,5 @@ Setiap perubahan terhadap ruang lingkup yang didefinisikan dalam SOW ini harus d
 ---
 
 *Dokumen dibuat pada 3 Juni 2026*
-*SkokPOS v2.2 — Kerangka Acuan Kerja / Statement of Work*
+*SkokPOS v2.3 — Kerangka Acuan Kerja / Statement of Work*
 
