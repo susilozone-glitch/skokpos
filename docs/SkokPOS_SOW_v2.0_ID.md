@@ -5,18 +5,21 @@
 
 | | |
 |---|---|
-| **Versi Dokumen** | 2.3 |
+| **Versi Dokumen** | 3.0 |
 | **Tanggal** | 3 Juni 2026 |
 | **Disiapkan Untuk** | Susilogiono |
 | **Nama Proyek** | SkokPOS |
-| **Jenis Proyek** | Progressive Web Application (PWA) |
+| **Jenis Proyek** | PWA + Native App (Ionic + Capacitor) |
 | **Status** | Draft — Menunggu Persetujuan |
 
 ---
 
 ## 1. Ringkasan Eksekutif
 
-Kerangka Acuan Kerja ini mendefinisikan ruang lingkup, deliverables, dan spesifikasi teknis untuk pengembangan **SkokPOS** — sistem Point of Sales (POS) multi-fungsi yang bekerja secara offline-first, dibangun sebagai Progressive Web Application (PWA).
+Kerangka Acuan Kerja ini mendefinisikan ruang lingkup, deliverables, dan spesifikasi teknis untuk pengembangan **SkokPOS** — sistem Point of Sales (POS) multi-fungsi yang bekerja secara offline-first, dibangun sebagai Progressive Web Application (PWA) + Native App (Android/iOS).
+
+> [!IMPORTANT]
+> Aplikasi didistribusikan melalui 3 channel: (1) PWA via browser, (2) Android via Google Play Store, (3) iOS via Apple App Store. Semua dari satu codebase yang sama.
 
 SkokPOS dirancang untuk melayani berbagai jenis bisnis:
 - **🛒 Retail**: Warung, minimarket, toko kelontong, toko retail
@@ -59,10 +62,10 @@ Proyek ini dibagi menjadi **6 fase** dengan deliverables sebagai berikut:
 
 | # | Deliverable | Deskripsi |
 |---|---|---|
-| 1.1 | Inisialisasi Proyek | Proyek Next.js 15 (App Router) dengan konfigurasi TypeScript-ready |
-| 1.2 | Konfigurasi PWA | Service Worker, Web App Manifest, strategi caching offline, installability di Android/iOS |
+| 1.1 | Inisialisasi Proyek | Proyek **Ionic 8 + React + Capacitor 6** dengan konfigurasi TypeScript-ready |
+| 1.2 | Konfigurasi PWA & Native | PWA built-in Ionic, Capacitor untuk native build Android & iOS, Service Worker untuk offline caching |
 | 1.3 | Sistem Desain (Tailwind CSS v4) | Design token berbasis CSS Variables (warna, tipografi, spacing, shadow, animasi) dengan dukungan tema terang dan gelap |
-| 1.4 | Komponen UI (Shadcn/ui) | 20+ komponen premium siap pakai: Dialog, Table, Tabs, Sheet, Card, Command, dll. |
+| 1.4 | Komponen UI (Ionic Components) | 100+ komponen UI native-like built-in: IonModal, IonActionSheet, IonToast, IonTabs, IonList, IonRefresher, IonSliding, dll. |
 | 1.5 | Shell Aplikasi | Layout responsif dengan sidebar collapsible (desktop/tablet), navigasi bawah (mobile), header dengan search & notifikasi |
 | 1.6 | Firebase Setup | Pembuatan proyek Firebase baru, Firestore dengan offline persistence, Authentication, Realtime Database, Cloud Storage |
 | 1.7 | State Management | Arsitektur Zustand store untuk cart, produk, auth, settings, dan module visibility |
@@ -242,7 +245,7 @@ Kembali:            Rp  13.312
 | 4.4 | Peta Live (Admin) | Peta Leaflet + OpenStreetMap menampilkan semua driver aktif secara real-time |
 | 4.5 | Halaman Tracking Pelanggan | Halaman publik (tanpa login) dengan lokasi driver live di peta, detail pesanan, dan ETA |
 | 4.6 | Tampilan Mobile Driver | Tampilan dioptimalkan untuk handphone: pengiriman saat ini, antrean pesanan, update status satu-tap, dan broadcasting GPS |
-| 4.7 | Pelacak GPS | Geolocation API dengan polling hemat baterai (setiap 5 detik saat pengiriman aktif) |
+| 4.7 | Pelacak GPS | **Capacitor Geolocation** dengan polling hemat baterai (setiap 5 detik saat pengiriman aktif), mendukung **background GPS tracking** pada native build |
 | 4.8 | Sinkronisasi Lokasi | Push koordinat GPS real-time ke Firebase Realtime Database |
 | 4.9 | Kalkulator ETA | Estimasi waktu tiba berbasis jarak |
 | 4.10 | Simulasi Demo | Simulasi pergerakan GPS driver untuk testing/demo tanpa driver asli |
@@ -521,15 +524,13 @@ Item-item berikut secara eksplisit **tidak termasuk** dalam SOW ini dan dapat di
 | # | Item | Catatan |
 |---|---|---|
 | 1 | Integrasi payment gateway nyata (Midtrans, Xendit) | Hanya pembayaran mock; integrasi nyata di fase berikutnya |
-| 2 | Aplikasi mobile native (Play Store / App Store) | Hanya PWA; dapat dibungkus via TWA nanti |
-| 3 | Integrasi akuntansi / pembukuan | Tidak ada integrasi dengan software akuntansi (Accurate, Jurnal) |
-| 4 | E-commerce / portal pemesanan online | Tidak ada web store untuk pelanggan |
-| 5 | Manajemen meja restoran (floor plan) | Tidak termasuk dalam versi awal |
-| 6 | Mesin promosi lanjutan | Tidak ada beli-satu-gratis-satu, promo berbasis waktu, atau combo |
-| 7 | Dukungan multi-mata uang | Hanya IDR; multi-mata uang di fase berikutnya |
-| 8 | Pelacakan lokasi background (driver) | Hanya pelacakan foreground karena keterbatasan browser |
-| 9 | Setup domain kustom & SSL | Infrastruktur deployment tidak termasuk |
-| 10 | Pelatihan pengguna & dokumentasi | Manual pengguna akhir tidak termasuk |
+| 2 | Integrasi akuntansi / pembukuan | Tidak ada integrasi dengan software akuntansi (Accurate, Jurnal) |
+| 3 | E-commerce / portal pemesanan online | Tidak ada web store untuk pelanggan |
+| 4 | Manajemen meja restoran (floor plan) | Tidak termasuk dalam versi awal |
+| 5 | Mesin promosi lanjutan | Tidak ada beli-satu-gratis-satu, promo berbasis waktu, atau combo |
+| 6 | Dukungan multi-mata uang | Hanya IDR; multi-mata uang di fase berikutnya |
+| 7 | Setup domain kustom & SSL | Infrastruktur deployment tidak termasuk |
+| 8 | Pelatihan pengguna & dokumentasi | Manual pengguna akhir tidak termasuk |
 
 ---
 
@@ -539,10 +540,11 @@ Item-item berikut secara eksplisit **tidak termasuk** dalam SOW ini dan dapat di
 
 | Layer | Teknologi | Versi |
 |---|---|---|
-| Framework Frontend | Next.js (App Router) | 15.x |
+| Framework Frontend | **Ionic** | **8.x** |
 | Library UI | React | 19.x |
-| Styling | **Tailwind CSS** | **v4** |
-| Komponen UI | **Shadcn/ui** | Latest |
+| Native Runtime | **Capacitor** | **6.x** |
+| Styling | Tailwind CSS | v4 |
+| Komponen UI | **Ionic Components** (100+ built-in) | Latest |
 | State Management | Zustand | 5.x |
 | Data Fetching | TanStack React Query | 5.x |
 | Database (Utama) | Firebase Cloud Firestore | — |
@@ -551,10 +553,14 @@ Item-item berikut secara eksplisit **tidak termasuk** dalam SOW ini dan dapat di
 | Serverless Functions | Firebase Cloud Functions | — |
 | File Storage | Firebase Cloud Storage | — |
 | Peta | Leaflet + OpenStreetMap | 1.9.x |
-| Chart | Shadcn/ui Charts (Recharts) | 2.x |
-| Ikon | Lucide React | Latest |
-| Cetak Thermal | Custom ESC/POS via WebUSB / Web Bluetooth | — |
+| Chart | Recharts | 2.x |
+| Ikon | Ionicons + Lucide React | Latest |
+| Cetak Thermal | ESC/POS via **Capacitor BLE / WebUSB** | — |
+| Kamera | **@capacitor/camera** | — |
+| GPS | **@capacitor/geolocation** (background support) | — |
+| Barcode Scanner | **@capacitor-community/barcode-scanner** | — |
 | Bahasa | Bahasa Indonesia (default) + English | — |
+| Build Target | **PWA + Android (APK) + iOS (IPA)** | — |
 
 ### 4.2 Arsitektur Data
 
@@ -697,6 +703,8 @@ Proyek dianggap selesai ketika:
 30. ✅ Pembulatan diterapkan dengan benar dan tampil di struk
 31. ✅ Service charge aktif di mode Restoran dan terpisah dari PPN
 32. ✅ Voucher dan store credit dapat digunakan sebagai pembayaran
+33. ✅ App ter-build sebagai Android APK dan iOS IPA
+34. ✅ Native features (kamera, GPS background, barcode scanner) berfungsi
 
 ### 7.2 Tanda Tangan Persetujuan
 
@@ -718,5 +726,5 @@ Setiap perubahan terhadap ruang lingkup yang didefinisikan dalam SOW ini harus d
 ---
 
 *Dokumen dibuat pada 3 Juni 2026*
-*SkokPOS v2.3 — Kerangka Acuan Kerja / Statement of Work*
+*SkokPOS v3.0 — Kerangka Acuan Kerja / Statement of Work*
 

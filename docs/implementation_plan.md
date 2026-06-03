@@ -1,17 +1,25 @@
 # SkokPOS — Multi-Purpose POS System
 
-A full-featured, offline-first Point of Sales PWA with delivery live tracking, thermal printing, and sales best practices.
+A full-featured, offline-first Point of Sales **PWA + Native App** with delivery live tracking, thermal printing, and sales best practices.
+
+> **Platform**: PWA (browser) + Android (Play Store) + iOS (App Store) — from one codebase via Ionic + Capacitor.
 
 ## Architecture Overview
 
 ```mermaid
 graph TB
-    subgraph "Client (PWA)"
-        UI["Next.js App<br/>React Components"]
+    subgraph "Client (Ionic + Capacitor)"
+        UI["Ionic App<br/>React Components"]
+        CAP["Capacitor<br/>Native Runtime"]
         SW["Service Worker<br/>Offline Cache"]
-        IDB["IndexedDB<br/>Local Data Store"]
-        GPS["Geolocation API"]
-        BT["WebUSB / Web Bluetooth<br/>Thermal Printer"]
+        IDB["IndexedDB / SQLite<br/>Local Data Store"]
+    end
+
+    subgraph "Native Plugins (Capacitor)"
+        GPS["@capacitor/geolocation<br/>Background GPS"]
+        CAM["@capacitor/camera<br/>Photo Capture"]
+        BLE["Capacitor BLE<br/>Thermal Printer"]
+        BAR["Barcode Scanner<br/>Product Lookup"]
     end
 
     subgraph "Firebase Backend"
@@ -20,17 +28,20 @@ graph TB
         RT["Realtime Database<br/>Driver GPS Tracking"]
         FCM["Cloud Messaging<br/>Order Notifications"]
         CF["Cloud Functions<br/>Business Logic"]
-        STORE["Cloud Storage<br/>Product Images"]
+        STORE["Cloud Storage<br/>Product Images + POD"]
     end
 
     subgraph "External"
         OSM["OpenStreetMap<br/>Leaflet Maps"]
     end
 
+    UI --> CAP
     UI --> SW
     UI --> IDB
-    UI --> GPS
-    UI --> BT
+    CAP --> GPS
+    CAP --> CAM
+    CAP --> BLE
+    CAP --> BAR
     SW --> FS
     IDB <-->|"Sync"| FS
     GPS -->|"Live Location"| RT
@@ -43,19 +54,23 @@ graph TB
 
 | Layer | Technology | Rationale |
 |---|---|---|
-| **Framework** | Next.js 15 (App Router) | SSR, API routes, PWA-ready |
-| **UI** | React 19 + **Tailwind CSS v4** | Utility-first, tiny bundle, dark mode built-in |
-| **Components** | **Shadcn/ui** | Premium copy-paste components (Dialog, Table, Tabs, Sheet, etc.) |
+| **Framework** | **Ionic 8 + React** | Mobile-first, 100+ native-like components, PWA built-in |
+| **Native Runtime** | **Capacitor 6** | Native access: camera, GPS (background!), barcode, BLE |
+| **UI** | React 19 + **Tailwind CSS v4** | Utility-first, custom layouts beyond Ionic components |
+| **Components** | **Ionic UI Components** | IonModal, IonActionSheet, IonToast, IonTabs, IonList, etc. |
 | **State** | Zustand + React Query | Lightweight, offline-friendly |
 | **Database** | Firebase Firestore | Real-time sync, offline persistence |
-| **GPS Tracking** | Firebase Realtime DB | Ultra-low latency location updates |
+| **GPS Tracking** | Firebase Realtime DB + **@capacitor/geolocation** | Background GPS for driver tracking |
 | **Auth** | Firebase Auth | Role-based access (Super Admin/Admin/Cashier/Kitchen/Driver) |
 | **Maps** | Leaflet + OpenStreetMap | Free, no API key needed |
-| **Charts** | Shadcn/ui Charts (Recharts) | Built-in chart components, consistent styling |
-| **Printing** | ESC/POS via WebUSB | Direct thermal printer communication |
-| **Offline** | Service Worker + IndexedDB | Full offline-first capability |
+| **Charts** | Recharts | Flexible chart components |
+| **Printing** | ESC/POS via **Capacitor BLE / WebUSB** | Thermal printer: Bluetooth + USB |
+| **Camera** | **@capacitor/camera** | Native camera for Proof of Delivery photos |
+| **Barcode** | **@capacitor-community/barcode-scanner** | Native barcode scanning |
+| **Offline** | Service Worker + Capacitor Preferences | Full offline-first capability |
 | **Currency** | IDR (Indonesian Rupiah) | Default with formatting (Rp 50.000) |
-| **Icons** | Lucide React | Modern, consistent icon set (used by Shadcn/ui) |
+| **Icons** | **Ionicons** + Lucide React | Native-style icons + modern set |
+| **Build Targets** | **PWA + Android APK + iOS IPA** | One codebase → 3 platforms |
 
 ---
 
@@ -70,10 +85,10 @@ graph TB
 - ✅ **Store Mode**: Dynamic — Retail (default) & Restaurant, selectable per outlet
 
 > [!NOTE]
-> **Thermal Printer**: WebUSB requires HTTPS or localhost. For testing on Android over WiFi, we'll use ngrok or a self-signed certificate.
+> **Thermal Printer**: Capacitor BLE plugin for Bluetooth printers. WebUSB fallback for USB printers. Both require HTTPS or localhost for PWA mode.
 
 > [!NOTE]
-> **GPS Tracking**: Initial version tracks driver location while the app is in the foreground.
+> **GPS Tracking**: Capacitor Geolocation plugin supports **background GPS tracking** on Android & iOS native builds. PWA mode is foreground-only.
 
 ---
 
@@ -339,31 +354,34 @@ Tailwind-based design system with CSS custom properties for theming:
 - **Animations**: Custom keyframes for skeleton loading, slide-in, fade, pulse
 - **Responsive**: Mobile-first with Tailwind breakpoints (`sm:`, `md:`, `lg:`, `xl:`)
 
-#### [NEW] Shadcn/ui Components to Install
-Pre-built, accessible, customizable components — installed on-demand:
+#### [NEW] Ionic UI Components (Built-in)
+No separate installation needed — all included in `@ionic/react`:
 
 | Component | POS Usage |
 |---|---|
-| `Button` | All action buttons, payment, confirm, cancel |
-| `Dialog` | Payment modal, discount modal, confirmations |
-| `Sheet / Drawer` | Held orders drawer, mobile cart panel |
-| `Table` | Inventory, vendor list, staff, PO items, stock opname |
-| `Tabs` | Product categories, PO status, report periods |
-| `Select / Combobox` | Vendor picker, driver assignment, outlet selector |
-| `Badge` | Order status, stock alerts, role badges |
-| `Toast / Sonner` | Success/error notifications, low stock alerts |
-| `Command` | Quick product search (⌘K style) |
-| `Calendar + DatePicker` | Report date range, PO dates |
-| `Chart` | Revenue, category sales, payment distribution |
-| `Card` | Product cards, dashboard stat cards, order cards |
-| `Input` | Search, barcode input, forms |
-| `Label` | Form labels |
-| `Dropdown Menu` | Action menus, user menu |
-| `Avatar` | Staff avatar in header |
-| `Separator` | Visual dividers |
-| `Skeleton` | Loading states |
-| `Switch` | Toggle settings (dark mode, tax inclusive) |
-| `Tooltip` | Icon button hints |
+| `IonButton` | All action buttons, payment, confirm, cancel |
+| `IonModal` | Payment modal, discount modal, confirmations |
+| `IonActionSheet` | Quick actions, payment method selection |
+| `IonSheet / IonDrawer` | Held orders drawer, mobile cart panel |
+| `IonList + IonItem` | Inventory, vendor list, staff, PO items |
+| `IonSegment` | Product categories, PO status tabs, report periods |
+| `IonSelect` | Vendor picker, driver assignment, outlet selector |
+| `IonBadge` | Order status, stock alerts, role badges |
+| `IonToast` | Success/error notifications, low stock alerts |
+| `IonSearchbar` | Product search, customer search |
+| `IonDatetime` | Report date range, PO dates, expiry dates |
+| `IonCard` | Product cards, dashboard stat cards, order cards |
+| `IonInput` | Search, barcode input, forms |
+| `IonLabel` | Form labels |
+| `IonPopover` | Action menus, tooltips |
+| `IonAvatar` | Staff avatar in header |
+| `IonRefresher` | Pull-to-refresh on lists |
+| `IonItemSliding` | Swipe actions on list items |
+| `IonFab` | Floating action button for quick add |
+| `IonLoading` | Loading states |
+| `IonToggle` | Settings toggles (dark mode, tax inclusive) |
+| `IonChip` | Filter tags, category pills |
+| `IonInfiniteScroll` | Lazy-load long product lists |
 
 #### [NEW] `src/app/setup/page.jsx` — Setup Wizard (First-Time Only)
 Multi-step onboarding wizard shown on first launch:
@@ -400,10 +418,10 @@ Multi-step onboarding wizard shown on first launch:
 - Used in: Setup Wizard (Step 2), Settings (Business Info), Outlet Management
 
 #### [NEW] `src/components/layout/` — App Shell
-- `Sidebar.jsx` — Collapsible navigation with **mode-aware menu items** (Kitchen & Table links hidden in Retail mode)
-- `Header.jsx` — Search, notifications bell, user avatar, dark mode toggle, **active outlet selector**
-- `MobileNav.jsx` — Bottom tab navigation for phone screens
-- `AppShell.jsx` — Responsive layout wrapper (sidebar on desktop, bottom nav on mobile)
+- `Sidebar.tsx` — Collapsible navigation with **mode-aware menu items** (Kitchen & Table links hidden in Retail mode)
+- `Header.tsx` — Search, notifications bell, user avatar, dark mode toggle, **active outlet selector**
+- `TabBar.tsx` — `IonTabBar` bottom navigation for phone/tablet screens
+- `AppShell.tsx` — Responsive layout: `IonSplitPane` (sidebar on desktop/tablet, tabs on mobile)
 
 #### [NEW] `src/lib/storeMode.js` — Store Mode Engine
 - `STORE_MODES` enum (retail, restaurant)
@@ -1154,66 +1172,73 @@ const moduleVisibility = {
 
 ```
 skokpos/
+├── android/                   # 🤖 Capacitor Android project (auto-generated)
+├── ios/                       # 🍎 Capacitor iOS project (auto-generated)
 ├── public/
 │   ├── manifest.json          # PWA manifest
-│   ├── sw.js                  # Service Worker
-│   ├── icons/                 # App icons (192px, 512px)
+│   ├── icons/                 # App icons (192px, 512px, adaptive)
 │   └── sounds/                # Notification sounds
 ├── src/
-│   ├── app/
-│   │   ├── globals.css        # Tailwind base + CSS variables (light/dark)
-│   │   ├── layout.jsx         # Root layout with AppShell
-│   │   ├── page.jsx           # Landing → redirect to /checkout or /setup
-│   │   ├── setup/             # 🆕 First-time setup wizard
-│   │   ├── (pos)/
-│   │   │   ├── checkout/      # Main POS checkout (mode-aware)
-│   │   │   ├── shift/         # 🆕 Shift management (open/close kasir)
-│   │   │   ├── returns/       # 🆕 Return, refund & void
-│   │   │   ├── credit/        # 🆕 Bon/hutang management
-│   │   │   ├── delivery/      # Delivery management
-│   │   │   └── kitchen/       # 🍽️ Kitchen Display System (restaurant only)
-│   │   ├── (admin)/
-│   │   │   ├── inventory/     # Inventory management + expiry tracking
-│   │   │   ├── vendors/       # 🆕 Vendor/supplier management
-│   │   │   ├── purchase-orders/ # 🆕 Purchase orders + goods receiving
-│   │   │   ├── stock-opname/  # 🆕 Physical stock count
-│   │   │   ├── reports/       # Analytics dashboard + scheduled reports
-│   │   │   ├── activity-log/  # 🆕 Audit trail / activity log
-│   │   │   ├── staff/         # Staff management
-│   │   │   ├── customers/     # Customer database
-│   │   │   └── settings/      # App settings + module visibility
-│   │   ├── (driver)/
-│   │   │   └── driver/        # Driver mobile view
+│   ├── App.tsx                # Root app with IonApp + IonReactRouter
+│   ├── routes.tsx             # All route definitions (React Router)
+│   ├── theme/
+│   │   ├── variables.css      # Ionic CSS variables (colors, fonts)
+│   │   └── tailwind.css       # Tailwind base + custom styles
+│   ├── pages/                 # All page components
+│   │   ├── Setup.tsx          # First-time setup wizard
+│   │   ├── pos/
+│   │   │   ├── Checkout.tsx   # Main POS checkout (mode-aware)
+│   │   │   ├── Shift.tsx      # Shift management (open/close kasir)
+│   │   │   ├── Returns.tsx    # Return, refund & void
+│   │   │   ├── Credit.tsx     # Bon/hutang management
+│   │   │   ├── Delivery.tsx   # Delivery management
+│   │   │   └── Kitchen.tsx    # 🍽️ Kitchen Display System
+│   │   ├── admin/
+│   │   │   ├── Inventory.tsx  # Inventory + expiry tracking
+│   │   │   ├── Vendors.tsx    # Vendor/supplier management
+│   │   │   ├── PurchaseOrders.tsx # PO + goods receiving
+│   │   │   ├── StockOpname.tsx # Physical stock count
+│   │   │   ├── Reports.tsx    # Analytics + scheduled reports
+│   │   │   ├── ActivityLog.tsx # Audit trail
+│   │   │   ├── Staff.tsx      # Staff management
+│   │   │   ├── Customers.tsx  # Customer database
+│   │   │   └── Settings.tsx   # App settings + module visibility
+│   │   ├── driver/
+│   │   │   └── DriverView.tsx # Driver mobile view
 │   │   └── track/
-│   │       └── [orderId]/     # Public tracking page
+│   │       └── TrackOrder.tsx # Public tracking page
 │   ├── components/
-│   │   ├── ui/                # 🆕 Shadcn/ui components (Button, Dialog, Table, etc.)
-│   │   ├── layout/            # AppShell, Sidebar, Header
-│   │   ├── pos/               # POS-specific components
+│   │   ├── layout/            # AppShell, Sidebar, Header, TabBar
+│   │   ├── pos/               # POS-specific components (cart, payment, QRIS, etc.)
 │   │   ├── delivery/          # Delivery & tracking components
 │   │   ├── printer/           # Thermal print + barcode label components
-│   │   ├── setup/             # 🆕 Setup wizard components
-│   │   └── charts/            # Chart components
+│   │   ├── setup/             # Setup wizard step components
+│   │   └── charts/            # Chart components (Recharts)
 │   ├── lib/
 │   │   ├── firebase/          # Firebase config & helpers
-│   │   ├── i18n/              # 🆕 Internationalization
-│   │   │   ├── config.js        #    Language config
-│   │   │   ├── id.json          #    🇮🇩 Bahasa Indonesia
-│   │   │   ├── en.json          #    🇬🇧 English
-│   │   │   ├── useTranslation.js #   React hook
-│   │   │   └── formatters.js    #    Number/date/currency formatters
+│   │   ├── i18n/              # Internationalization
+│   │   │   ├── config.ts      #    Language config
+│   │   │   ├── id.json        #    🇮🇩 Bahasa Indonesia
+│   │   │   ├── en.json        #    🇬🇧 English
+│   │   │   ├── useTranslation.ts #  React hook
+│   │   │   └── formatters.ts  #    Number/date/currency formatters
+│   │   ├── capacitor/         # Capacitor plugin wrappers
+│   │   │   ├── camera.ts      #    @capacitor/camera wrapper
+│   │   │   ├── geolocation.ts #    @capacitor/geolocation wrapper
+│   │   │   └── barcodeScanner.ts # @capacitor-community/barcode-scanner
 │   │   ├── printer/           # ESC/POS printing + barcode label engine
 │   │   ├── tracking/          # GPS & delivery tracking
 │   │   ├── models/            # Data models & validation
-│   │   ├── storeMode.js       # 🆕 Store mode engine & feature flags
-│   │   ├── utils.ts           # 🆕 cn() helper for Tailwind class merging
+│   │   ├── storeMode.ts       # Store mode engine & feature flags
+│   │   ├── utils.ts           # cn() helper for Tailwind class merging
 │   │   └── hooks/             # Custom React hooks
 │   ├── stores/                # Zustand state stores (incl. shiftStore)
-│   └── styles/                # Additional custom styles (if needed)
-├── components.json            # 🆕 Shadcn/ui configuration
-├── tailwind.config.ts         # 🆕 Tailwind CSS configuration (if needed for v4)
+│   └── styles/                # Additional custom styles
+├── capacitor.config.ts        # Capacitor configuration
+├── ionic.config.json          # Ionic CLI configuration
+├── tailwind.config.ts         # Tailwind CSS configuration
+├── vite.config.ts             # Vite build configuration (Ionic uses Vite)
 ├── .env.local                 # Firebase config (gitignored)
-├── next.config.js             # Next.js + PWA config
 └── package.json
 ```
 
