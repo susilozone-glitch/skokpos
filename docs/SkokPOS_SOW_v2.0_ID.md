@@ -5,7 +5,7 @@
 
 | | |
 |---|---|
-| **Versi Dokumen** | 3.2 |
+| **Versi Dokumen** | 3.3 |
 | **Tanggal** | 3 Juni 2026 |
 | **Disiapkan Untuk** | Susilogiono |
 | **Nama Proyek** | SkokPOS |
@@ -131,6 +131,10 @@ Proyek ini dibagi menjadi **6 fase** dengan deliverables sebagai berikut:
 | 2.28 | **Transfer Bank** | Pilih bank (BCA/Mandiri/BNI/BRI), tampilkan nomor rekening toko, konfirmasi manual kasir, input ref number |
 | 2.29 | **Pecahan Kembalian** | Breakdown kembalian: Rp 16.960 = 1×Rp10.000 + 1×Rp5.000 + 1×Rp2.000, visual pecahan uang |
 | 2.30 | **COD sebagai Payment Method** | COD muncul sebagai opsi bayar hanya saat tipe order = Delivery, QRIS driver untuk cashless COD, jumlah tagih tampil di driver view |
+| 2.31 | **Gateway-Ready Architecture** | Arsitektur pembayaran abstrak: interface PaymentGateway dengan implementasi MockGateway (konfirmasi manual kasir). Siap plug-in Midtrans/Xendit tanpa ubah UI. Dynamic QRIS, Virtual Account, E-Wallet deeplink — semua via interface yang sama |
+| 2.32 | **Payment Status Auto-Check** | Polling status pembayaran setiap 3 detik saat menunggu, auto-confirm jika gateway mendeteksi pembayaran masuk, timeout 15 menit, fallback ke konfirmasi manual |
+| 2.33 | **Webhook Handler (Cloud Function)** | Firebase Cloud Function endpoint untuk menerima callback/webhook dari payment gateway, update status transaksi real-time, anti-replay protection |
+| 2.34 | **EDC Machine & Hybrid Mode** | Pilih per metode bayar: Gateway (auto-confirm), Manual (kasir confirm), atau EDC (gesek mesin, input ref #). Merchant dengan mesin EDC bank bisa pakai EDC untuk kartu + Manual untuk QRIS |
 
 **Fitur Khusus Restoran (🍽️)**:
 - Toggle tipe pesanan (Makan di Tempat / Bawa Pulang)
@@ -560,7 +564,7 @@ Item-item berikut secara eksplisit **tidak termasuk** dalam SOW ini dan dapat di
 
 | # | Item | Catatan |
 |---|---|---|
-| 1 | Integrasi payment gateway nyata (Midtrans, Xendit) | Hanya pembayaran mock; integrasi nyata di fase berikutnya |
+| 1 | Integrasi payment gateway nyata (Midtrans, Xendit) | Arsitektur gateway-ready sudah disiapkan (interface + mock). Tinggal plug-in API key & implementasi — estimasi 1-2 hari per gateway |
 | 2 | Integrasi akuntansi / pembukuan | Tidak ada integrasi dengan software akuntansi (Accurate, Jurnal) |
 | 3 | E-commerce / portal pemesanan online | Tidak ada web store untuk pelanggan |
 | 4 | Manajemen meja restoran (floor plan) | Tidak termasuk dalam versi awal |
@@ -750,6 +754,8 @@ Proyek dianggap selesai ketika:
 40. ✅ Approval chain memerlukan PIN untuk aksi sensitif
 41. ✅ Auto-logout dan session security berfungsi
 42. ✅ Tema warna Indigo Blue diterapkan konsisten di light & dark mode
+43. ✅ Payment gateway interface terabstraksi dengan benar (mock berfungsi)
+44. ✅ Webhook handler siap menerima callback dari payment gateway
 
 ### 7.2 Tanda Tangan Persetujuan
 
@@ -771,5 +777,5 @@ Setiap perubahan terhadap ruang lingkup yang didefinisikan dalam SOW ini harus d
 ---
 
 *Dokumen dibuat pada 3 Juni 2026*
-*SkokPOS v3.2 — Kerangka Acuan Kerja / Statement of Work*
+*SkokPOS v3.3 — Kerangka Acuan Kerja / Statement of Work*
 

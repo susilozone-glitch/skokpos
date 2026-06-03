@@ -626,6 +626,328 @@ The heart of the app — split-screen layout:
 - Manual open: tombol "Buka Laci" (PIN admin required)
 - Log setiap pembukaan laci di activity log
 
+#### [NEW] Gateway-Ready Payment Architecture
+Abstract payment interface — mock for now, plug-in real gateway later with zero UI changes.
+
+**Architecture:**
+```typescript
+// src/lib/payment/gateway.ts
+
+interface PaymentGateway {
+  // Generate payment request
+  createPayment(order: Order, method: PaymentMethod): Promise<PaymentRequest>;
+  // Check payment status (polling)
+  checkStatus(transactionId: string): Promise<PaymentStatus>;
+  // Handle webhook callback (Cloud Function)
+  handleWebhook(payload: WebhookPayload): Promise<void>;
+  // Cancel/expire payment
+  cancelPayment(transactionId: string): Promise<void>;
+}
+
+type PaymentStatus = 'pending' | 'paid' | 'expired' | 'failed' | 'refunded';
+
+interface PaymentRequest {
+  transactionId: string;
+  method: PaymentMethod;
+  amount: number;
+  // QRIS: QR code URL/data
+  qrCodeUrl?: string;
+  // VA: virtual account number
+  vaNumber?: string;
+  // E-Wallet: deeplink URL
+  deeplinkUrl?: string;
+  // Expiry
+  expiresAt: Date;
+}
+```
+
+**Implementation Layers:**
+```
+┌─────────────────────────────────────────┐
+│           UI Components                  │
+│  (QRISDisplay, PaymentModal, etc.)       │
+│  ← Tidak perlu berubah saat ganti       │
+│     gateway                              │
+├─────────────────────────────────────────┤
+│         Payment Service                  │
+│  (src/lib/payment/paymentService.ts)     │
+│  ← Orchestrator: polling, retry,         │
+│     timeout, status update               │
+├─────────────────────────────────────────┤
+│         Gateway Interface                │
+│  (src/lib/payment/gateway.ts)            │
+│  ← Abstract contract                     │
+├──────────┬──────────┬───────────────────┤
+│  Mock    │ Midtrans │ Xendit            │
+│ Gateway  │ Gateway  │ Gateway           │
+│ (Phase 1)│(Phase 2) │ (Phase 2)         │
+│  ✅ Now  │ 🔜 Later │ 🔜 Later          │
+└──────────┴──────────┴───────────────────┘
+```
+
+**Phase 1: MockGateway (Current Scope):**
+```typescript
+// src/lib/payment/mockGateway.ts
+class MockGateway implements PaymentGateway {
+  async createPayment(order, method) {
+    if (method === 'QRIS') {
+      return {
+        transactionId: generateId(),
+        qrCodeUrl: generateStaticQR(order.outletId), // Static QR
+        amount: order.total,
+        expiresAt: addMinutes(new Date(), 15),
+      };
+    }
+    // Other methods: return manual confirmation pending
+    return { transactionId: generateId(), amount: order.total };
+  }
+
+  async checkStatus(id) {
+    return 'pending'; // Always pending — kasir manual confirm
+  }
+}
+```
+
+**Phase 2: Real Gateway (Future — 1-2 days per gateway):**
+```typescript
+// src/lib/payment/midtransGateway.ts (future)
+class MidtransGateway implements PaymentGateway {
+  async createPayment(order, method) {
+    const response = await midtransAPI.charge({
+      payment_type: method === 'QRIS' ? 'qris' : 'bank_transfer',
+      transaction_details: { order_id: order.id, gross_amount: order.total },
+    });
+    return {
+      transactionId: response.transaction_id,
+      qrCodeUrl: response.actions?.find(a => a.name === 'generate-qr-code')?.url,
+      expiresAt: new Date(response.expiry_time),
+    };
+  }
+
+  async checkStatus(id) {
+    const status = await midtransAPI.status(id);
+    return mapMidtransStatus(status.transaction_status);
+    // 'settlement' → 'paid', 'expire' → 'expired'
+  }
+
+  async handleWebhook(payload) {
+    // Verify signature
+    // Update order status in Firestore
+    // Trigger receipt print
+  }
+}
+```
+
+**Payment Flow with Auto-Check:**
+```
+┌─────────────────────────────────────────────────────┐
+│  MOCK (Phase 1)              REAL (Phase 2)          │
+│                                                      │
+│  Customer scan QR            Customer scan QR        │
+│       ↓                           ↓                  │
+│  Bayar di app banking        Bayar di app banking    │
+│       ↓                           ↓                  │
+│  UI: "Menunggu..."           UI: "Menunggu..."       │
+│  Polling setiap 3 detik      Polling setiap 3 detik  │
+│       ↓                           ↓                  │
+│  MockGateway:                MidtransGateway:        │
+│  return 'pending'            return 'paid' ✅        │
+│       ↓                           ↓                  │
+│  Kasir klik [CONFIRM]        AUTO-CONFIRM! 🎉       │
+│       ↓                      Struk auto-cetak!       │
+│  Struk tercetak                                      │
+│                                                      │
+│  Timeout 15 menit            Timeout 15 menit        │
+│  → "Gagal, coba lagi"       → "Gagal, coba lagi"   │
+└─────────────────────────────────────────────────────┘
+```
+
+**Payment Status UI:**
+```
+┌─────────────────────────────────┐
+│  📱 QRIS — Rp 33.000           │
+│                                  │
+│      ┌──────────────┐           │
+│      │  ██████████  │           │
+│      │  ██ QRIS ██  │           │
+│      │  ██████████  │           │
+│      └──────────────┘           │
+│                                  │
+│  ⏳ Menunggu pembayaran...      │
+│  ██████████░░░░░░░░ 12:34      │
+│                                  │
+│  [ ✅ Konfirmasi Manual ]       │  ← Mock: kasir klik
+│  [ ❌ Batalkan ]                │  ← Real: tombol ini hilang
+└─────────────────────────────────┘
+```
+
+**Webhook Handler (Firebase Cloud Function):**
+```typescript
+// functions/src/webhooks/payment.ts
+export const paymentWebhook = onRequest(async (req, res) => {
+  const { gateway } = req.params; // 'midtrans' | 'xendit'
+  const payload = req.body;
+
+  // 1. Verify signature (anti-replay)
+  const isValid = verifySignature(gateway, payload, req.headers);
+  if (!isValid) return res.status(403).send('Invalid signature');
+
+  // 2. Find transaction
+  const txRef = extractTransactionId(gateway, payload);
+  const orderSnap = await db.collection('orders')
+    .where('paymentTransactionId', '==', txRef).get();
+
+  // 3. Update order status
+  if (payload.status === 'settlement' || payload.status === 'PAID') {
+    await orderSnap.docs[0].ref.update({
+      paymentStatus: 'paid',
+      paidAt: FieldValue.serverTimestamp(),
+    });
+    // 4. Trigger real-time UI update via Firestore listener
+  }
+
+  res.status(200).send('OK');
+});
+```
+
+**Gateway Config (Settings Page) — Per-Method Hybrid:**
+
+Merchant bisa pilih **per metode bayar**: pakai Gateway (auto) atau Manual/EDC (kasir confirm).
+
+```
+┌──────────────────────────────────────────────────┐
+│  ⚙️ Pengaturan Pembayaran                        │
+│                                                   │
+│  ─── Payment Gateway ───                         │
+│  Gateway:    [○ Tanpa Gateway  ○ Midtrans ○ Xendit]
+│  Server Key: [sk-***********]                    │
+│  Mode:       [○ Sandbox  ○ Production]           │
+│  [ 🧪 Test Connection ]                          │
+│                                                   │
+│  ─── Metode Pembayaran ───                       │
+│                                                   │
+│  💵 Tunai              [███] ON                  │
+│     Mode: Selalu Manual (hitung kembalian)        │
+│                                                   │
+│  📱 QRIS               [███] ON                  │
+│     Mode: [○ Gateway (auto) ● Manual (kasir)]    │
+│     Static QR: [Upload gambar QR]                │
+│                                                   │
+│  💳 Kartu Debit/Kredit  [███] ON                  │
+│     Mode: [○ Gateway  ● EDC Mesin]               │
+│     Mesin EDC: [BCA EDC          ] ▼             │
+│     ☑ Wajib input no. ref dari mesin EDC         │
+│                                                   │
+│  📲 E-Wallet            [███] ON                  │
+│     Mode: [○ Gateway (deeplink) ● Manual]        │
+│                                                   │
+│  🏦 Transfer Bank       [███] ON                  │
+│     Mode: Selalu Manual                           │
+│     Rekening: [BCA - 1234567890]                 │
+│     Rekening: [Mandiri - 0987654321]             │
+│     [+ Tambah Rekening]                          │
+│                                                   │
+│  📒 COD                 [███] ON                  │
+│     Mode: Selalu Manual (driver collect)          │
+│                                                   │
+│  🎁 Voucher             [███] ON                  │
+│  💎 Store Credit        [███] ON                  │
+│  ⭐ Loyalty Points      [███] ON                  │
+│  💰 Uang Muka (DP)     [███] ON                  │
+│                                                   │
+│  [ 💾 Simpan ]                                   │
+└──────────────────────────────────────────────────┘
+```
+
+**3 Payment Modes:**
+
+| Mode | How It Works | Use When |
+|---|---|---|
+| **🤖 Gateway** | Auto-confirm via Midtrans/Xendit webhook | Merchant punya akun gateway |
+| **👤 Manual** | Kasir klik "Sudah Bayar" | Merchant tanpa gateway / EDC |
+| **🏧 EDC** | Kasir gesek di mesin EDC bank, input ref # | Merchant punya mesin EDC dari bank |
+
+**Per-Method Configuration:**
+
+| Method | Gateway Mode | Manual Mode | EDC Mode |
+|---|---|---|---|
+| 💵 Tunai | — | ✅ Selalu manual | — |
+| 📱 QRIS | ✅ Dynamic QR, auto-confirm | ✅ Static QR, kasir confirm | — |
+| 💳 Kartu | ✅ Tokenized, 3DS | — | ✅ Gesek di mesin EDC |
+| 📲 E-Wallet | ✅ Deeplink, auto-confirm | ✅ Customer bayar manual | — |
+| 🏦 Transfer | ✅ Virtual Account | ✅ Manual confirm | — |
+| 📒 COD | — | ✅ Selalu manual | — |
+| 🎁 Voucher | — | ✅ Code validation | — |
+
+**EDC Machine Support:**
+```
+┌─────────────────────────────────────┐
+│  💳 Pembayaran Kartu — EDC Mode    │
+│                                      │
+│  Total: Rp 150.000                  │
+│                                      │
+│  1. Gesek/tap kartu di mesin EDC    │
+│  2. Tunggu approval dari mesin      │
+│  3. Input nomor referensi:          │
+│                                      │
+│  No. Ref: [____________]            │
+│  Bank:    [BCA          ] ▼         │
+│  Tipe:    [○ Debit  ○ Kredit]       │
+│                                      │
+│  [ ✅ Konfirmasi Pembayaran ]       │
+└─────────────────────────────────────┘
+```
+
+**Flow Comparison:**
+```
+GATEWAY:                 MANUAL:                  EDC:
+                                                  
+QRIS tampil di layar     QRIS tampil di layar     Kasir: "Kartu, Rp 150K"
+     ↓                        ↓                        ↓
+Customer scan             Customer scan             Gesek di mesin EDC
+     ↓                        ↓                        ↓
+Webhook → auto ✅         Kasir: [CONFIRM]          Mesin: "APPROVED"
+     ↓                        ↓                        ↓
+Struk auto cetak          Struk cetak               Input ref # → Struk cetak
+```
+
+**Switching Mode — Per Method in Settings Store:**
+```typescript
+// src/stores/settingsStore.ts
+paymentConfig: {
+  gateway: 'mock', // 'mock' | 'midtrans' | 'xendit'
+  midtransKeys: { serverKey: '', clientKey: '' },
+  xenditKeys: { apiKey: '' },
+  methods: {
+    cash:      { enabled: true, mode: 'manual' },
+    qris:      { enabled: true, mode: 'manual' },  // 'gateway' | 'manual'
+    card:      { enabled: true, mode: 'edc', edcBank: 'BCA' }, // 'gateway' | 'edc'
+    ewallet:   { enabled: true, mode: 'manual' },  // 'gateway' | 'manual'
+    transfer:  { enabled: true, mode: 'manual' },  // 'gateway' | 'manual'
+    cod:       { enabled: true, mode: 'manual' },
+    voucher:   { enabled: true, mode: 'manual' },
+    credit:    { enabled: true, mode: 'manual' },
+    points:    { enabled: true, mode: 'manual' },
+    dp:        { enabled: true, mode: 'manual' },
+  }
+}
+```
+
+**File Structure Addition:**
+```
+src/lib/payment/
+├── gateway.ts              # PaymentGateway interface
+├── paymentService.ts       # Orchestrator (polling, timeout, retry)
+├── mockGateway.ts          # Phase 1: manual confirmation
+├── edcHandler.ts           # EDC machine handler (ref # input)
+├── midtransGateway.ts      # Phase 2: Midtrans integration (stub)
+├── xenditGateway.ts        # Phase 2: Xendit integration (stub)
+└── webhookVerifier.ts      # Signature verification helpers
+
+functions/src/webhooks/
+└── payment.ts              # Cloud Function webhook handler
+```
+
 #### [NEW] `src/app/(pos)/shift/` — Shift Management (Buka/Tutup Kasir)
 - **Buka Shift**:
   - Kasir input modal awal (starting cash)
@@ -1692,3 +2014,7 @@ skokpos/
 72. ✅ **Time-Based Access**: Restrict login to work hours, weekend, holidays
 73. ✅ **Role-Based Notifications**: Each role gets relevant alerts only
 74. ✅ **Indigo Blue Theme**: Professional color system with full light/dark mode
+75. ✅ **Gateway-Ready Architecture**: Abstract payment interface — plug in Midtrans/Xendit with zero UI changes
+76. ✅ **Payment Auto-Check**: Polling every 3s with timeout, auto-confirm when gateway detects payment
+77. ✅ **Webhook Handler**: Cloud Function endpoint for payment gateway callbacks with signature verification
+78. ✅ **EDC Machine & Per-Method Mode**: Choose Gateway, Manual, or EDC per payment method independently
