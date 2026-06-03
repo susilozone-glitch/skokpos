@@ -980,6 +980,188 @@ functions/src/webhooks/
 - `firestore.js` — Firestore helpers with offline persistence
 - `auth.js` — Authentication helpers
 - `realtime.js` — Realtime Database for GPS tracking
+- `appCheck.js` — App Check with reCAPTCHA Enterprise (protects AI API)
+
+#### [NEW] `src/lib/ai/` — Firebase AI Logic (Gemini) Integration
+
+**Setup**: `npx -y firebase-tools@latest init ailogic` — enables Gemini Developer API, no separate API key.
+
+**AI Service (Core):**
+```typescript
+// src/lib/ai/aiService.ts
+import { getAI, getGenerativeModel, GoogleAIBackend, ResponseModality } from 'firebase/ai';
+
+const ai = getAI(app, { backend: new GoogleAIBackend() });
+
+// Text model — category suggestion, field auto-fill
+export const textModel = getGenerativeModel(ai, {
+  model: 'gemini-2.5-flash-lite',
+  generationConfig: { temperature: 0.3, maxOutputTokens: 256 },
+});
+
+// Image model — product photo generation
+export const imageModel = getGenerativeModel(ai, {
+  model: 'gemini-2.5-flash-image',
+  generationConfig: { responseModalities: [ResponseModality.TEXT, ResponseModality.IMAGE] },
+});
+
+// JSON model — structured output
+export const jsonModel = getGenerativeModel(ai, {
+  model: 'gemini-2.5-flash-lite',
+  generationConfig: { responseMimeType: 'application/json', temperature: 0.1 },
+});
+```
+
+**Product AI — Auto-Suggest Fields:**
+```typescript
+// src/lib/ai/productAI.ts
+// User types "Indomie Goreng" → AI returns:
+// { category: "Mie Instan", unit: "pcs", isByWeight: false, suggestedSKU: "MIE-001" }
+```
+
+**Product AI — Generate Placeholder Image:**
+```typescript
+// src/lib/ai/imageGenerator.ts
+// Generates clean product photo on white background
+// → Upload to Firebase Storage → return URL
+// → Shown with ✨ badge "AI Generated"
+```
+
+**Image Priority System:**
+```
+1. 📷 Real photo (camera/upload)     ← Best
+2. 🔍 Online image (user picked)    ← Good
+3. 🤖 AI Generated placeholder      ← OK (auto)
+4. 🍜 Category icon fallback        ← Basic
+5. [I] Letter avatar                 ← Last resort
+```
+
+**Smart Product Creation Flow:**
+```
+User types name → AI (parallel, debounced 800ms):
+├── 🖼️ Generate image       (2-3 sec)
+├── 📂 Suggest category     (< 1 sec)
+├── 📏 Suggest unit          (< 1 sec)
+└── 🏷️ Generate SKU          (instant)
+
+Result: User only needs to fill: Harga + Stok
+Time: 2 minutes → 15 seconds 🚀
+```
+
+**Online Image Search:**
+- Search product images from internet
+- Grid of results to pick from
+- Auto-resize (800×800) & upload to Firebase Storage
+
+**React Hook:**
+```typescript
+// src/hooks/useProductAI.ts
+export function useProductAI() {
+  // Returns: { aiSuggestions, aiImage, isGenerating, onProductNameChange }
+  // Debounced 800ms after user stops typing
+  // Runs image gen + field suggest in parallel
+  // Checks quota before calling AI
+}
+```
+
+#### [NEW] AI Usage Tracking & Quota Management
+
+**AI Usage Logger — Every AI call logged to Firestore:**
+```typescript
+// src/lib/ai/aiUsageLogger.ts
+// Logs: type, model, inputTokens, outputTokens, estimatedCost,
+//       userId, userName, productName, success, errorMessage, durationMs
+// Collection: ai_usage
+```
+
+**AI Quota Manager — Daily + Monthly limits:**
+```typescript
+// src/lib/ai/aiQuotaManager.ts
+// Checks quota before every AI call
+// Default: 50/day, 500/month (configurable by Super Admin)
+// Auto-reset daily counter, monthly counter on 1st
+// Returns: { allowed, remaining: { daily, monthly }, message }
+```
+
+**Cost Estimation:**
+| Model | Input | Output | Free Tier |
+|---|---|---|---|
+| `gemini-2.5-flash-lite` | Free | Free | 30 RPM |
+| `gemini-2.5-flash-image` | $0.0001/1K | $0.0004/1K | 10 RPM |
+
+**Typical Usage (100-500 products, one-time):**
+| Store Size | AI Calls | Est. Cost |
+|---|---|---|
+| 100 products | ~100 calls | **Free** |
+| 500 products | ~500 calls | **< $1** |
+| Ongoing (new) | ~20-50/month | **Free** |
+
+#### [NEW] `src/pages/admin/AIUsageDashboard.tsx` — AI Dashboard (🔑 Super Admin Only)
+
+**Dashboard Metrics:**
+| Widget | Data |
+|---|---|
+| Total API Calls | Count this month |
+| Estimasi Biaya | Total estimated cost |
+| Success Rate | % successful calls |
+| Kuota Harian | Progress bar: used / limit |
+| Kuota Bulanan | Progress bar: used / limit |
+
+**Detail Views:**
+- Penggunaan per Fitur (Image Gen, Category Suggest, Field Autofill)
+- Penggunaan per User (siapa pakai paling banyak)
+- Trend Harian 30 hari (bar chart)
+- Log Terbaru (timestamp, user, action, status)
+
+**AI Settings Page (🔑 Super Admin Only):**
+
+| Setting | Default | Description |
+|---|---|---|
+| 🖼️ AI Image Generation | ON | Toggle generate gambar |
+| 📂 Category Auto-Suggest | ON | Toggle suggest kategori |
+| 📝 Field Auto-Fill | ON | Toggle auto-fill unit/SKU |
+| Batas Harian | 50 | Max AI calls per hari |
+| Batas Bulanan | 500 | Max AI calls per bulan |
+| Cost Alert | $1.00 | Notif jika biaya > threshold |
+| Auto-Disable | $5.00 | Auto-off jika biaya > threshold |
+| Allowed Roles | SA + Admin | Role yang boleh pakai AI |
+
+**Smart Alerts:**
+| Alert | Trigger | Action |
+|---|---|---|
+| ⚠️ Kuota 80% | Usage hits 80% limit | Notify Super Admin |
+| 🔴 Kuota Habis | Daily/monthly limit reached | Disable AI + notify |
+| 💰 Cost Alert | Monthly cost > threshold | Notify Super Admin |
+| ❌ Error Spike | 5+ consecutive failures | Notify Super Admin |
+| 🔄 Monthly Reset | 1st of each month | Auto-reset counter |
+
+**File Structure:**
+```
+src/lib/ai/
+├── aiService.ts          # Initialize Firebase AI Logic (Gemini)
+├── productAI.ts          # Suggest category, unit, SKU
+├── imageGenerator.ts     # Generate product placeholder image
+├── aiUsageLogger.ts      # Log every AI call to Firestore
+└── aiQuotaManager.ts     # Daily/monthly quota enforcement
+
+src/hooks/
+└── useProductAI.ts       # React hook for product form
+
+src/pages/admin/
+├── AIUsageDashboard.tsx  # AI usage stats (Super Admin)
+└── AISettings.tsx        # AI configuration (Super Admin)
+```
+
+**Data Models:**
+```
+AIUsageLog:    { id, type, model, inputTokens, outputTokens, estimatedCost,
+                 userId, userName, productName, success, errorMessage,
+                 durationMs, outletId, createdAt }
+
+AIQuota:       { monthlyLimit, dailyLimit, imageGenEnabled, autoSuggestEnabled,
+                 currentMonthUsage, currentDayUsage, lastResetDate,
+                 costAlertThreshold, costAutoDisableThreshold, allowedRoles[] }
+```
 
 #### [NEW] `src/lib/models/` — Data Models
 ```
@@ -2018,3 +2200,8 @@ skokpos/
 76. ✅ **Payment Auto-Check**: Polling every 3s with timeout, auto-confirm when gateway detects payment
 77. ✅ **Webhook Handler**: Cloud Function endpoint for payment gateway callbacks with signature verification
 78. ✅ **EDC Machine & Per-Method Mode**: Choose Gateway, Manual, or EDC per payment method independently
+79. ✅ **AI Product Image Generator**: Auto-generate placeholder image when adding product (Firebase AI Logic / Gemini)
+80. ✅ **AI Auto-Suggest Fields**: Category, unit, SKU auto-suggested from product name
+81. ✅ **Online Image Search**: Search and pick product images from internet
+82. ✅ **AI Usage Dashboard**: Super Admin sees total calls, cost, per-user usage, trend, logs
+83. ✅ **AI Quota & Cost Control**: Daily/monthly limits, cost alerts, auto-disable, role-based access

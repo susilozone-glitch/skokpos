@@ -5,7 +5,7 @@
 
 | | |
 |---|---|
-| **Versi Dokumen** | 3.3 |
+| **Versi Dokumen** | 3.4 |
 | **Tanggal** | 3 Juni 2026 |
 | **Disiapkan Untuk** | Susilogiono |
 | **Nama Proyek** | SkokPOS |
@@ -135,6 +135,11 @@ Proyek ini dibagi menjadi **6 fase** dengan deliverables sebagai berikut:
 | 2.32 | **Payment Status Auto-Check** | Polling status pembayaran setiap 3 detik saat menunggu, auto-confirm jika gateway mendeteksi pembayaran masuk, timeout 15 menit, fallback ke konfirmasi manual |
 | 2.33 | **Webhook Handler (Cloud Function)** | Firebase Cloud Function endpoint untuk menerima callback/webhook dari payment gateway, update status transaksi real-time, anti-replay protection |
 | 2.34 | **EDC Machine & Hybrid Mode** | Pilih per metode bayar: Gateway (auto-confirm), Manual (kasir confirm), atau EDC (gesek mesin, input ref #). Merchant dengan mesin EDC bank bisa pakai EDC untuk kartu + Manual untuk QRIS |
+| 2.35 | **AI Product Image Generator** | Saat tambah produk, AI otomatis generate gambar placeholder berdasarkan nama produk. Menggunakan Firebase AI Logic (Gemini). Bisa diganti nanti dengan foto asli / gambar online |
+| 2.36 | **AI Auto-Suggest Fields** | Saat ketik nama produk, AI otomatis suggest: kategori, unit (pcs/kg), SKU, tipe produk (retail/restoran). Mempercepat input dari 2 menit → 15 detik |
+| 2.37 | **Online Image Search** | Cari gambar produk dari internet, pilih dari grid hasil pencarian, auto-resize & upload ke Firebase Storage |
+| 2.38 | **AI Usage Dashboard** | Dashboard khusus Super Admin: total API calls, estimasi biaya, success rate, penggunaan per user, penggunaan per fitur, trend 30 hari, log terbaru |
+| 2.39 | **AI Quota & Cost Control** | Batas harian (50) & bulanan (500) konfigurabel, cost alert jika melebihi threshold, auto-disable jika biaya terlalu tinggi, pilih role yang boleh pakai AI |
 
 **Fitur Khusus Restoran (🍽️)**:
 - Toggle tipe pesanan (Makan di Tempat / Bawa Pulang)
@@ -572,6 +577,7 @@ Item-item berikut secara eksplisit **tidak termasuk** dalam SOW ini dan dapat di
 | 6 | Dukungan multi-mata uang | Hanya IDR; multi-mata uang di fase berikutnya |
 | 7 | Setup domain kustom & SSL | Infrastruktur deployment tidak termasuk |
 | 8 | Pelatihan pengguna & dokumentasi | Manual pengguna akhir tidak termasuk |
+| 9 | ~~AI / Machine Learning~~ | ✅ **Sudah masuk lingkup** — AI diimplementasikan via Firebase AI Logic (Gemini) untuk: generate gambar produk, auto-suggest field produk, dan kontrol kuota AI (lihat Fase 2: deliverable 2.35–2.39) |
 
 ---
 
@@ -602,6 +608,7 @@ Item-item berikut secara eksplisit **tidak termasuk** dalam SOW ini dan dapat di
 | Barcode Scanner | **@capacitor-community/barcode-scanner** | — |
 | Bahasa | Bahasa Indonesia (default) + English | — |
 | Build Target | **PWA + Android (APK) + iOS (IPA)** | — |
+| AI / Generative | **Firebase AI Logic (Gemini)** | Latest |
 
 ### 4.2 Arsitektur Data
 
@@ -756,6 +763,10 @@ Proyek dianggap selesai ketika:
 42. ✅ Tema warna Indigo Blue diterapkan konsisten di light & dark mode
 43. ✅ Payment gateway interface terabstraksi dengan benar (mock berfungsi)
 44. ✅ Webhook handler siap menerima callback dari payment gateway
+45. ✅ AI generate gambar placeholder saat tambah produk
+46. ✅ AI auto-suggest kategori dan unit produk
+47. ✅ AI usage dashboard menampilkan statistik penggunaan
+48. ✅ AI quota dan cost control berfungsi (batas harian/bulanan)
 
 ### 7.2 Tanda Tangan Persetujuan
 
@@ -777,5 +788,5 @@ Setiap perubahan terhadap ruang lingkup yang didefinisikan dalam SOW ini harus d
 ---
 
 *Dokumen dibuat pada 3 Juni 2026*
-*SkokPOS v3.3 — Kerangka Acuan Kerja / Statement of Work*
+*SkokPOS v3.4 — Kerangka Acuan Kerja / Statement of Work*
 
