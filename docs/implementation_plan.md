@@ -123,19 +123,35 @@ SkokPOS adapts its features based on the **store category** selected during setu
 | Struk Thermal | ✅ Simple | ✅ + Meja + Tipe Order |
 | Sidebar Menu | Standard | + Dapur, + Meja |
 
-### Setup Wizard Flow
+### Setup Wizard Flow (7 Steps)
 
 ```mermaid
 flowchart TD
-    A["🚀 Buka SkokPOS"] --> B{"Sudah setup?"}
-    B -->|Belum| C["📋 Setup Wizard"]
-    B -->|Sudah| H["→ Checkout"]
-
-    C --> D["1️⃣ Pilih Kategori Toko\n🛒 Retail / 🍽️ Restoran"]
-    D --> E["2️⃣ Info Bisnis\nNama, Alamat, Telepon, Logo"]
-    E --> F["3️⃣ Pengaturan Awal\nPajak, Printer, Bahasa"]
-    F --> G["4️⃣ Buat Outlet Pertama\nNama outlet, Alamat"]
-    G --> H
+    A["📱 Download SkokPOS"] --> B["🚪 Landing Page"]
+    B --> B1["🆕 Daftar Baru"]
+    B --> B2["🔑 Masuk"]
+    B --> B3["📨 Kode Undangan"]
+    
+    B1 --> R["📱 Register\nPhone OTP / Google / Email"]
+    R --> P["👤 Profile Setup\nNama, Email"]
+    P --> C["📋 Setup Wizard (7 Steps)"]
+    
+    B2 --> SS{"Multi-store?"}
+    SS -->|Ya| SEL["🏪 Pilih Toko"]
+    SS -->|Tidak| H["→ Dashboard"]
+    SEL --> H
+    
+    B3 --> INV["Input Kode → Join Toko"]
+    INV --> H
+    
+    C --> D["1️⃣ Kategori Toko\n🛒 Retail / 🍽️ Restoran"]
+    D --> E["2️⃣ Info Bisnis\nNama, Alamat, Logo, WA"]
+    E --> F["3️⃣ Pajak & Biaya\nPPN, Service Charge"]
+    F --> PAY["4️⃣ Metode Pembayaran\nTunai, QRIS, EDC, Transfer"]
+    PAY --> DEL["5️⃣ Pengiriman\nAktif/Nonaktif, Radius"]
+    DEL --> STAFF["6️⃣ Undang Staff\n(opsional, skip OK)"]
+    STAFF --> PROD["7️⃣ Produk Pertama\nSample data / tambah manual"]
+    PROD --> H
 ```
 
 ### Architecture: How Mode Switching Works
@@ -679,21 +695,216 @@ Landing Page → [ Daftar / Masuk / Kode Undangan ]
          └── Returning: Login → Store Selector (if multi) → Dashboard
 ```
 
-#### [NEW] `src/app/setup/page.jsx` — Setup Wizard (First-Time Only)
-Multi-step onboarding wizard shown on first launch:
-- **Step 1 — Kategori Toko**: Choose 🛒 Retail or 🍽️ Restoran (visual cards with icons & descriptions)
-- **Step 2 — Info Bisnis**: Store name, address, phone number, **logo upload**
-  - Drag-and-drop or click-to-browse image upload
-  - Image preview with crop & resize (max 512x512px)
-  - Supports PNG, JPG, SVG formats
-  - Stored in Firebase Cloud Storage (`stores/{storeId}/logo`)
-  - Optional — uses default SkokPOS icon if skipped
-- **Step 3 — Pengaturan Awal**: Tax rate (12% default), currency, language, printer setup
-- **Step 4 — Outlet Pertama**: Create first outlet with name, address, and **optional outlet-specific logo**
-- Saves config to Firestore + local storage, then redirects to `/checkout`
-- Includes sample product data seeding based on chosen mode:
-  - **Retail**: Indomie, Aqua, Beras, Minyak Goreng, Sabun, etc.
-  - **Restoran**: Nasi Goreng, Mie Ayam, Es Teh, Kopi Susu, etc.
+#### [NEW] `src/app/setup/page.jsx` — Setup Wizard (7 Steps, First-Time Only)
+
+Shown after new owner registers. Progress bar at top: `Step X of 7`
+
+**Step 1 — Kategori Toko** (Pilih satu):
+```
+┌──────────────────────────────────────────┐
+│  Step 1 of 7  ━━░░░░░░░░░░░░░░           │
+│                                           │
+│  Pilih jenis usaha Anda:                 │
+│                                           │
+│  ┌─────────────────┐ ┌─────────────────┐ │
+│  │                 │ │                 │ │
+│  │  🛒             │ │  🍽️             │ │
+│  │  RETAIL         │ │  RESTORAN       │ │
+│  │                 │ │                 │ │
+│  │ Warung, Toko,   │ │ Restoran, Café, │ │
+│  │ Minimarket,     │ │ Rumah Makan,    │ │
+│  │ Apotek, Toko    │ │ Warung Makan,   │ │
+│  │ Bangunan        │ │ Food Court      │ │
+│  └─────────────────┘ └─────────────────┘ │
+│                                           │
+│  [ Lanjutkan → ]                          │
+└──────────────────────────────────────────┘
+```
+
+**Step 2 — Info Bisnis**:
+```
+┌──────────────────────────────────────────┐
+│  Step 2 of 7  ━━━━░░░░░░░░░░░            │
+│                                           │
+│  Nama Toko:     [Toko Berkah Jaya    ]   │
+│  Alamat:        [Jl. Sudirman 45     ]   │
+│  Kota:          [Jakarta           ] ▼   │
+│  No. HP/WA:     [+62 812 3456 7890   ]   │
+│  Email Toko:    [toko@email.com (opt)]   │
+│                                           │
+│  Logo Toko:                               │
+│  [📷 Upload Logo]  (opsional)            │
+│                                           │
+│  Nama Outlet:   [Outlet Pusat        ]   │
+│  (otomatis 1 outlet pertama dibuat)       │
+│                                           │
+│  [ ← Kembali ]  [ Lanjutkan → ]          │
+└──────────────────────────────────────────┘
+```
+- Logo: drag-drop or click, resize 512×512, PNG/JPG/SVG
+- Stored in Firebase Cloud Storage (`stores/{storeId}/logo`)
+- Optional — uses default SkokPOS icon if skipped
+
+**Step 3 — Pajak & Biaya**:
+```
+┌──────────────────────────────────────────┐
+│  Step 3 of 7  ━━━━━━░░░░░░░░░            │
+│                                           │
+│  ─── Pajak ───                           │
+│  PPN:           [12  ] %  (default 12%)  │
+│  Harga sudah termasuk PPN?               │
+│                [○ Ya (inclusive) ● Tidak] │
+│                                           │
+│  ─── 🍽️ Restoran Only ───               │  ← Hidden if Retail
+│  Service Charge: [███] ON                │
+│  Persentase:    [5   ] % (5-10%)         │
+│                                           │
+│  ─── Pembulatan ───                      │
+│  Bulatkan total: [○ Off  ● Rp 100  ○ Rp 500  ○ Rp 1.000]
+│                                           │
+│  ─── Bahasa ───                          │
+│  [● 🇮🇩 Bahasa Indonesia  ○ 🇬🇧 English] │
+│                                           │
+│  [ ← Kembali ]  [ Lanjutkan → ]          │
+└──────────────────────────────────────────┘
+```
+
+**Step 4 — Metode Pembayaran**:
+```
+┌──────────────────────────────────────────┐
+│  Step 4 of 7  ━━━━━━━━░░░░░░░            │
+│                                           │
+│  Aktifkan metode bayar yang Anda terima: │
+│                                           │
+│  💵 Tunai               [███] ON  ✅     │  ← Always on
+│                                           │
+│  📱 QRIS                [███] ON         │
+│     [○ Belum punya QR  ● Punya QR]      │
+│     [📷 Upload gambar QR statis]         │
+│                                           │
+│  💳 Kartu Debit/Kredit  [███] ON         │
+│     Punya mesin EDC?    [● Ya  ○ Tidak]  │
+│     Bank EDC:           [BCA         ] ▼ │
+│                                           │
+│  📲 E-Wallet (GoPay, OVO, dll)  [   ] OFF│
+│                                           │
+│  🏦 Transfer Bank       [███] ON         │
+│     Nama Bank:  [BCA               ]     │
+│     No. Rek:    [1234567890        ]     │
+│     Atas Nama:  [Susilogiono       ]     │
+│     [+ Tambah Rekening]                  │
+│                                           │
+│  💡 Anda bisa ubah semua ini nanti       │
+│     di Pengaturan → Pembayaran           │
+│                                           │
+│  [ ← Kembali ]  [ Lanjutkan → ]          │
+└──────────────────────────────────────────┘
+```
+
+**Step 5 — Pengiriman** (Opsional):
+```
+┌──────────────────────────────────────────┐
+│  Step 5 of 7  ━━━━━━━━━━░░░░░            │
+│                                           │
+│  Apakah toko Anda melayani pengiriman?   │
+│                                           │
+│  [● Ya, aktifkan delivery]               │
+│  [○ Tidak, hanya di tempat]              │
+│                                           │
+│  ─── If YES ───                          │
+│  Ongkos kirim:                            │
+│  [○ Gratis  ● Flat Rp 10.000  ○ Per-km] │
+│                                           │
+│  Radius maks: [10  ] km                  │
+│                                           │
+│  COD (bayar di tempat)?  [███] ON        │
+│                                           │
+│  [ ← Kembali ]  [ Lanjutkan → ]          │
+└──────────────────────────────────────────┘
+```
+
+**Step 6 — Undang Staff** (Skip OK):
+```
+┌──────────────────────────────────────────┐
+│  Step 6 of 7  ━━━━━━━━━━━━░░░            │
+│                                           │
+│  Tambahkan staff Anda (opsional):        │
+│                                           │
+│  ┌────────────────────┬────────────────┐ │
+│  │ Nama               │ Role           │ │
+│  ├────────────────────┼────────────────┤ │
+│  │ [Ani            ]  │ [💳 Kasir   ]▼│ │
+│  │ [                ]  │ [          ]▼│ │
+│  └────────────────────┴────────────────┘ │
+│  [+ Tambah Staff]                        │
+│                                           │
+│  Kode undangan akan digenerate otomatis  │
+│  dan bisa di-share via WhatsApp.         │
+│                                           │
+│  [ ← Kembali ]  [ Skip → ]  [ Lanjutkan → ]
+└──────────────────────────────────────────┘
+```
+
+**Step 7 — Produk Pertama**:
+```
+┌──────────────────────────────────────────┐
+│  Step 7 of 7  ━━━━━━━━━━━━━━━ ✅         │
+│                                           │
+│  Mulai dengan:                            │
+│                                           │
+│  ┌─────────────────────────────────────┐ │
+│  │ 📦 Muat Produk Contoh               │ │
+│  │ 10 produk sample sesuai tipe toko   │ │
+│  │ (bisa dihapus nanti)                │ │
+│  └─────────────────────────────────────┘ │
+│                                           │
+│  ┌─────────────────────────────────────┐ │
+│  │ ➕ Tambah Produk Manual              │ │
+│  │ Langsung input produk pertama Anda  │ │
+│  └─────────────────────────────────────┘ │
+│                                           │
+│  ┌─────────────────────────────────────┐ │
+│  │ 📥 Import dari CSV                  │ │
+│  │ Upload file CSV produk              │ │
+│  └─────────────────────────────────────┘ │
+│                                           │
+│  ┌─────────────────────────────────────┐ │
+│  │ ⏭️ Skip — Tambah Nanti              │ │
+│  │ Langsung ke dashboard               │ │
+│  └─────────────────────────────────────┘ │
+│                                           │
+│  [ ← Kembali ]  [ 🎉 Selesai! → ]       │
+└──────────────────────────────────────────┘
+```
+
+**Sample product data seeding based on mode:**
+- **Retail**: Indomie, Aqua, Beras, Minyak Goreng, Sabun, etc. (10 produk + 3 kategori)
+- **Restoran**: Nasi Goreng, Mie Ayam, Es Teh, Kopi Susu, etc. (10 produk + modifier + 3 kategori)
+
+**After Step 7 → Completion Screen:**
+```
+┌──────────────────────────────────────────┐
+│                                           │
+│          🎉 Selamat!                     │
+│                                           │
+│  Toko Berkah Jaya siap digunakan!        │
+│                                           │
+│  ✅ Toko: Retail                          │
+│  ✅ Pajak: PPN 12%                        │
+│  ✅ Pembayaran: Tunai, QRIS, Transfer    │
+│  ✅ Pengiriman: Aktif (10 km)             │
+│  ✅ Staff: 1 undangan dikirim             │
+│  ✅ Produk: 10 sample loaded              │
+│                                           │
+│  [ 🚀 Mulai Berjualan! ]                │
+│                                           │
+│  Semua pengaturan bisa diubah kapan saja │
+│  di menu ⚙️ Pengaturan                   │
+└──────────────────────────────────────────┘
+```
+
+**Saves to Firestore:** store doc + outlet doc + settings doc + staff invitations + sample products
+**Redirects to:** Dashboard (if owner) or Checkout (if first-time flow)
 
 **🖼️ Where the Logo Appears:**
 
@@ -2435,3 +2646,4 @@ skokpos/
 86. ✅ **Staff Invitation System**: Code/WA/QR/Email, single-use, 7-day expiry, role-locked
 87. ✅ **PIN Quick Login**: 4-6 digit PIN for kasir at POS terminal, bcrypt hashed, 5 attempts lock
 88. ✅ **Pricing Plans (Optional)**: Free/Pro/Business tiers with staff and outlet limits
+89. ✅ **Setup Wizard (7 Steps)**: Store type → Business info → Tax → Payment methods → Delivery → Staff invite → Products
