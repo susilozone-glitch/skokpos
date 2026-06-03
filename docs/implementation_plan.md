@@ -44,16 +44,18 @@ graph TB
 | Layer | Technology | Rationale |
 |---|---|---|
 | **Framework** | Next.js 15 (App Router) | SSR, API routes, PWA-ready |
-| **UI** | React 19 + Vanilla CSS | Full control, design system tokens |
+| **UI** | React 19 + **Tailwind CSS v4** | Utility-first, tiny bundle, dark mode built-in |
+| **Components** | **Shadcn/ui** | Premium copy-paste components (Dialog, Table, Tabs, Sheet, etc.) |
 | **State** | Zustand + React Query | Lightweight, offline-friendly |
 | **Database** | Firebase Firestore | Real-time sync, offline persistence |
 | **GPS Tracking** | Firebase Realtime DB | Ultra-low latency location updates |
-| **Auth** | Firebase Auth | Role-based access (Admin/Cashier/Kitchen/Driver) |
+| **Auth** | Firebase Auth | Role-based access (Super Admin/Admin/Cashier/Kitchen/Driver) |
 | **Maps** | Leaflet + OpenStreetMap | Free, no API key needed |
+| **Charts** | Shadcn/ui Charts (Recharts) | Built-in chart components, consistent styling |
 | **Printing** | ESC/POS via WebUSB | Direct thermal printer communication |
 | **Offline** | Service Worker + IndexedDB | Full offline-first capability |
 | **Currency** | IDR (Indonesian Rupiah) | Default with formatting (Rp 50.000) |
-| **Icons** | Lucide React | Modern, consistent icon set |
+| **Icons** | Lucide React | Modern, consistent icon set (used by Shadcn/ui) |
 
 ---
 
@@ -152,28 +154,250 @@ const getModeFeatures = (mode) => ({
 #### [NEW] Project Setup
 - Initialize Next.js 15 project with App Router
 - Configure PWA with `next-pwa` (Service Worker, manifest.json)
-- Set up Firebase SDK (Auth, Firestore, Realtime DB)
+- **Install & configure Tailwind CSS v4**
+- **Initialize Shadcn/ui** (`npx shadcn@latest init`) with New York style
+- Set up Firebase SDK (Auth, Firestore, Realtime DB, **Cloud Storage for logo uploads**)
 - Configure offline persistence
+- **Set up i18n (multi-language) system**
 
-#### [NEW] `src/styles/globals.css` — Design System
-Complete CSS design system with:
-- **CSS Custom Properties**: Color palette (light/dark), spacing, typography, shadows, border-radius
-- **Color Palette**: Professional blue-indigo primary, warm accent colors, semantic colors for success/warning/error
-- **Typography**: Inter font from Google Fonts, responsive scale
-- **Components**: Button variants, cards, inputs, badges, modals, tables
-- **Animations**: Subtle transitions, loading skeletons, slide-ins
-- **Responsive**: Mobile-first breakpoints for phone/tablet/desktop
+#### [NEW] `src/lib/i18n/` — Internationalization System
+Lightweight JSON-based translation system (no heavy library needed):
+
+- `config.js` — Language config, default locale, supported locales
+- `id.json` — 🇮🇩 Bahasa Indonesia translations (default)
+- `en.json` — 🇬🇧 English translations
+- `useTranslation.js` — React hook: `const { t } = useTranslation()`
+- `LanguageContext.jsx` — React Context provider for active language
+- `formatters.js` — Locale-aware number, currency, and date formatting
+
+**Supported Languages:**
+
+| Code | Language | Status |
+|---|---|---|
+| `id` | 🇮🇩 Bahasa Indonesia | Default |
+| `en` | 🇬🇧 English | Supported |
+
+**What Gets Translated:**
+
+| Surface | Examples |
+|---|---|
+| 📱 UI Labels | Menu, buttons, headings, placeholders, tooltips |
+| 🧱 Receipts | Header, footer, item labels, payment labels |
+| 📊 Reports | Chart titles, export headers, date formats |
+| 🔔 Notifications | Low stock alerts, order updates, errors |
+| ⚠️ Error Messages | Validation errors, connection issues |
+| 📅 Date/Time | "3 Juni 2026" vs "June 3, 2026" |
+| 💰 Currency | "Rp 50.000" (both locales, IDR stays as IDR) |
+| 📦 PO & Inventory | Status labels, vendor forms, stock opname |
+
+**Translation Sample:**
+
+```json
+// src/lib/i18n/id.json (Bahasa Indonesia)
+{
+  "common": {
+    "save": "Simpan",
+    "cancel": "Batal",
+    "delete": "Hapus",
+    "edit": "Ubah",
+    "search": "Cari...",
+    "back": "Kembali",
+    "confirm": "Konfirmasi",
+    "loading": "Memuat..."
+  },
+  "nav": {
+    "checkout": "Kasir",
+    "delivery": "Pengiriman",
+    "kitchen": "Dapur",
+    "inventory": "Inventaris",
+    "vendors": "Vendor",
+    "purchaseOrders": "Pesanan Pembelian",
+    "stockOpname": "Stok Opname",
+    "reports": "Laporan",
+    "staff": "Karyawan",
+    "customers": "Pelanggan",
+    "settings": "Pengaturan"
+  },
+  "checkout": {
+    "cart": "Keranjang",
+    "subtotal": "Subtotal",
+    "discount": "Diskon",
+    "tax": "PPN",
+    "total": "Total",
+    "pay": "Bayar",
+    "cash": "Tunai",
+    "card": "Kartu",
+    "ewallet": "E-Wallet",
+    "change": "Kembalian",
+    "holdOrder": "Tahan Pesanan",
+    "recallOrder": "Ambil Pesanan",
+    "dineIn": "Makan di Tempat",
+    "takeaway": "Bawa Pulang",
+    "tableNumber": "Nomor Meja"
+  },
+  "inventory": {
+    "stock": "Stok",
+    "lowStock": "Stok Rendah",
+    "outOfStock": "Habis",
+    "minStock": "Stok Minimum",
+    "adjustment": "Penyesuaian",
+    "reorder": "Perlu Restock"
+  },
+  "po": {
+    "draft": "Draft",
+    "sent": "Dikirim",
+    "received": "Diterima",
+    "partial": "Sebagian",
+    "cancelled": "Dibatalkan",
+    "createPO": "Buat Pesanan Pembelian",
+    "sendViaWA": "Kirim via WhatsApp",
+    "receiveGoods": "Terima Barang"
+  },
+  "receipt": {
+    "thankYou": "Terima Kasih!",
+    "noReturn": "Barang yang sudah dibeli tidak dapat dikembalikan",
+    "cashier": "Kasir",
+    "outlet": "Outlet",
+    "orderType": "Tipe",
+    "table": "Meja"
+  }
+}
+```
+
+```json
+// src/lib/i18n/en.json (English)
+{
+  "common": {
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "edit": "Edit",
+    "search": "Search...",
+    "back": "Back",
+    "confirm": "Confirm",
+    "loading": "Loading..."
+  },
+  "nav": {
+    "checkout": "Checkout",
+    "delivery": "Delivery",
+    "kitchen": "Kitchen",
+    "inventory": "Inventory",
+    "vendors": "Vendors",
+    "purchaseOrders": "Purchase Orders",
+    "stockOpname": "Stock Count",
+    "reports": "Reports",
+    "staff": "Staff",
+    "customers": "Customers",
+    "settings": "Settings"
+  },
+  "checkout": {
+    "cart": "Cart",
+    "subtotal": "Subtotal",
+    "discount": "Discount",
+    "tax": "Tax",
+    "total": "Total",
+    "pay": "Pay",
+    "cash": "Cash",
+    "card": "Card",
+    "ewallet": "E-Wallet",
+    "change": "Change",
+    "holdOrder": "Hold Order",
+    "recallOrder": "Recall Order",
+    "dineIn": "Dine In",
+    "takeaway": "Takeaway",
+    "tableNumber": "Table Number"
+  }
+}
+```
+
+**Usage in Components:**
+```jsx
+function CartPanel() {
+  const { t } = useTranslation();
+  return (
+    <div>
+      <h2>{t('checkout.cart')}</h2>        {/* "Keranjang" or "Cart" */}
+      <span>{t('checkout.subtotal')}</span> {/* "Subtotal" */}
+      <button>{t('checkout.pay')}</button>  {/* "Bayar" or "Pay" */}
+    </div>
+  );
+}
+```
+
+**Language Switching:**
+- Selected during **Setup Wizard** (Step 3: Pengaturan Awal)
+- Changeable anytime in **Settings** (all roles can change)
+- Instant switch — no page reload needed
+- Saved per user preference in local storage
+
+#### [NEW] `src/styles/globals.css` — Design System (Tailwind CSS v4)
+Tailwind-based design system with CSS custom properties for theming:
+- **CSS Variables**: HSL color tokens for light/dark themes via `@theme`
+- **Color Palette**: Professional indigo-blue primary, warm accents, semantic colors
+- **Typography**: Inter font from Google Fonts via `@import`
+- **Dark Mode**: `class` strategy — toggle via `dark:` prefix
+- **Animations**: Custom keyframes for skeleton loading, slide-in, fade, pulse
+- **Responsive**: Mobile-first with Tailwind breakpoints (`sm:`, `md:`, `lg:`, `xl:`)
+
+#### [NEW] Shadcn/ui Components to Install
+Pre-built, accessible, customizable components — installed on-demand:
+
+| Component | POS Usage |
+|---|---|
+| `Button` | All action buttons, payment, confirm, cancel |
+| `Dialog` | Payment modal, discount modal, confirmations |
+| `Sheet / Drawer` | Held orders drawer, mobile cart panel |
+| `Table` | Inventory, vendor list, staff, PO items, stock opname |
+| `Tabs` | Product categories, PO status, report periods |
+| `Select / Combobox` | Vendor picker, driver assignment, outlet selector |
+| `Badge` | Order status, stock alerts, role badges |
+| `Toast / Sonner` | Success/error notifications, low stock alerts |
+| `Command` | Quick product search (⌘K style) |
+| `Calendar + DatePicker` | Report date range, PO dates |
+| `Chart` | Revenue, category sales, payment distribution |
+| `Card` | Product cards, dashboard stat cards, order cards |
+| `Input` | Search, barcode input, forms |
+| `Label` | Form labels |
+| `Dropdown Menu` | Action menus, user menu |
+| `Avatar` | Staff avatar in header |
+| `Separator` | Visual dividers |
+| `Skeleton` | Loading states |
+| `Switch` | Toggle settings (dark mode, tax inclusive) |
+| `Tooltip` | Icon button hints |
 
 #### [NEW] `src/app/setup/page.jsx` — Setup Wizard (First-Time Only)
 Multi-step onboarding wizard shown on first launch:
 - **Step 1 — Kategori Toko**: Choose 🛒 Retail or 🍽️ Restoran (visual cards with icons & descriptions)
-- **Step 2 — Info Bisnis**: Store name, address, phone number, logo upload
+- **Step 2 — Info Bisnis**: Store name, address, phone number, **logo upload**
+  - Drag-and-drop or click-to-browse image upload
+  - Image preview with crop & resize (max 512x512px)
+  - Supports PNG, JPG, SVG formats
+  - Stored in Firebase Cloud Storage (`stores/{storeId}/logo`)
+  - Optional — uses default SkokPOS icon if skipped
 - **Step 3 — Pengaturan Awal**: Tax rate (12% default), currency, language, printer setup
-- **Step 4 — Outlet Pertama**: Create first outlet with name and address
+- **Step 4 — Outlet Pertama**: Create first outlet with name, address, and **optional outlet-specific logo**
 - Saves config to Firestore + local storage, then redirects to `/checkout`
 - Includes sample product data seeding based on chosen mode:
   - **Retail**: Indomie, Aqua, Beras, Minyak Goreng, Sabun, etc.
   - **Restoran**: Nasi Goreng, Mie Ayam, Es Teh, Kopi Susu, etc.
+
+**🖼️ Where the Logo Appears:**
+
+| Location | Description |
+|---|---|
+| 🧱 Struk / Receipt | Printed at top of thermal receipt (converted to ESC/POS bitmap) |
+| 📋 Sidebar | Displayed above store name in the navigation sidebar |
+| 🔐 Login / PIN Screen | Centered logo on staff login and PIN entry screen |
+| 🚚 Customer Tracking | Shown on the public delivery tracking page |
+| 📊 Reports Header | Displayed on exported PDF reports |
+
+#### [NEW] `src/components/ui/LogoUpload.jsx` — Reusable Logo Upload Component
+- Drag-and-drop zone with click fallback
+- Real-time image preview (circular crop)
+- Client-side resize to 512x512px before upload (saves bandwidth)
+- Upload progress indicator
+- Remove/replace logo button
+- Used in: Setup Wizard (Step 2), Settings (Business Info), Outlet Management
 
 #### [NEW] `src/components/layout/` — App Shell
 - `Sidebar.jsx` — Collapsible navigation with **mode-aware menu items** (Kitchen & Table links hidden in Retail mode)
@@ -229,12 +453,16 @@ The heart of the app — split-screen layout:
 
 #### [NEW] `src/lib/models/` — Data Models
 ```
-Store:    { id, name, address, phone, logo, storeMode, taxRate, taxInclusive, language, createdAt }
-Outlet:   { id, storeId, name, address, storeMode, isActive }
-Product:  { id, name, sku, barcode, categoryId, price, cost, image, variants[], modifiers[], isActive, stock, outletId }
-Order:    { id, orderNumber, items[], subtotal, discount, tax, total, paymentMethod, status, cashierId, customerId, outletId, orderType, tableNumber, createdAt }
-Category: { id, name, icon, color, sortOrder }
-Modifier: { id, name, price, group, isRequired }  // 🍽️ Restaurant only
+Store:         { id, name, address, phone, logo, storeMode, taxRate, taxInclusive, language, createdAt }
+Outlet:        { id, storeId, name, address, storeMode, isActive }
+Product:       { id, name, sku, barcode, categoryId, price, cost, image, variants[], modifiers[], isActive, stock, minStock, outletId, vendorId }
+Order:         { id, orderNumber, items[], subtotal, discount, tax, total, paymentMethod, status, cashierId, customerId, outletId, orderType, tableNumber, createdAt }
+Category:      { id, name, icon, color, sortOrder }
+Modifier:      { id, name, price, group, isRequired }  // 🍽️ Restaurant only
+Vendor:        { id, name, contactPerson, phone, email, address, notes, products[], isActive, outletId, createdAt }
+PurchaseOrder: { id, poNumber, vendorId, outletId, items[], status, subtotal, tax, total, notes, createdBy, createdAt, sentAt, receivedAt }
+POItem:        { productId, productName, qty, qtyReceived, unitPrice, subtotal }
+StockOpname:   { id, outletId, items[], status, countedBy, approvedBy, createdAt, completedAt }
 ```
 
 ---
@@ -355,30 +583,158 @@ Modifier: { id, name, price, group, isRequired }  // 🍽️ Restaurant only
 
 #### [NEW] `src/app/(admin)/inventory/page.jsx` — Inventory Management
 - Stock levels table with search and filters
-- Low stock alerts (visual badges)
+- Low stock alerts (visual badges + notification)
 - Stock adjustment (in/out with reason)
-- Stock history log
+- Stock history log (full audit trail)
 - Bulk import/export (CSV)
+- **Min stock threshold** per product (triggers smart reorder)
+
+#### [NEW] `src/app/(admin)/vendors/page.jsx` — Vendor / Supplier Management
+- Vendor list with search, filter by status (active/inactive)
+- Add/edit vendor: name, contact person, phone, email, address, notes
+- **Link products to vendor** — which vendor supplies which products
+- Vendor performance: total purchases, last order date, average delivery time
+- Purchase history per vendor
+- Quick action: "Buat PO" (create Purchase Order) from vendor page
+
+#### [NEW] `src/app/(admin)/purchase-orders/page.jsx` — Purchase Orders (PO)
+- PO list with status tabs: Semua | Draft | Dikirim | Diterima | Dibatalkan
+- **Create PO**:
+  - Select vendor → auto-populate vendor’s products
+  - Add items with qty and unit price
+  - Auto-calculate subtotal & total
+  - Add notes/catatan
+  - PO number format: `PO-YYYYMMDD-NNNN`
+- **PO Status Flow**:
+  ```
+  Draft → Dikirim → Diterima (Sebagian/Penuh) → Selesai
+                → Dibatalkan
+  ```
+- **Send PO to vendor**:
+  - Share via WhatsApp (formatted text message)
+  - Export as PDF (with store logo)
+  - Copy link
+- **Receive goods** — opens Goods Receiving flow
+
+#### [NEW] `src/app/(admin)/purchase-orders/receive/[poId]/page.jsx` — Goods Receiving
+- View PO items with expected qty
+- Input actual received qty per item
+- Mark items: Diterima Penuh | Diterima Sebagian | Tidak Diterima
+- **Auto-update inventory** on confirm
+- Option to create new PO for remaining items (partial delivery)
+- Print receiving slip on thermal printer
+
+#### [NEW] `src/app/(admin)/stock-opname/page.jsx` — Stock Opname (Physical Count)
+- Start new stock opname session
+- Scan barcode or search product → input physical count
+- **System vs Physical comparison** with variance column
+- Color-coded: 🟢 Match | 🟡 Minor difference | 🔴 Major difference
+- Approve adjustments (Super Admin / Admin only)
+- Auto-generate adjustment log with reason "Stock Opname"
+- History of past opname sessions
+
+#### [NEW] Smart Reorder System
+- Dashboard widget: "Produk Perlu Restock" (Products Need Restock)
+- When `stock <= minStock` → product appears in alert list
+- One-click: "Buat PO Otomatis" → generates draft PO grouped by vendor
+- Suggested qty = `(minStock * 2) - currentStock` (configurable multiplier)
+- Notification push for low stock alerts
 
 #### [NEW] `src/app/(admin)/reports/page.jsx` — Reports & Analytics
-- **Dashboard cards**: Today's revenue, orders count, average order value, top product
-- **Charts** (using lightweight Chart.js or Recharts):
-  - Revenue over time (line chart)
-  - Sales by category (donut chart)
-  - Payment method distribution (bar chart)
-  - Hourly sales heatmap
-- Date range picker
-- Export to CSV/PDF
+Comprehensive reporting suite with date range picker and export options:
+
+**📊 Dashboard / Ringkasan Harian:**
+- Revenue today vs yesterday (% change)
+- Order count, average order value
+- Top 5 products, low stock count, pending POs
+
+**💰 Laporan Penjualan (Sales):**
+- Penjualan harian / mingguan / bulanan (line chart)
+- Penjualan per produk (best sellers table)
+- Penjualan per kategori (donut chart)
+- Penjualan per outlet (comparison)
+- Penjualan per kasir (staff performance)
+- Penjualan per jam (hourly heatmap — identify peak hours)
+- Penjualan per metode bayar (cash vs card vs e-wallet)
+- Penjualan per tipe order (🍽️ dine-in vs takeaway vs delivery)
+- Trend penjualan (weekly/monthly trend)
+
+**📦 Laporan Inventaris (Inventory):**
+- Stok saat ini (all products with current level)
+- Stok rendah & habis (below threshold)
+- Pergerakan stok (in/out history per product)
+- Nilai inventaris (total value = stock × cost price)
+- Stok opname history (past sessions & variances)
+
+**🏦 Laporan Pembelian (Purchase):**
+- Pembelian per vendor (spending breakdown)
+- Riwayat PO (all purchase orders with status)
+- Harga beli trend (cost price changes over time)
+- Vendor performance (delivery time, fulfillment rate)
+
+**👥 Laporan Pelanggan (Customer):**
+- Pelanggan terbanyak (top spenders)
+- Pelanggan baru per periode
+- Loyalty points summary (earned/redeemed)
+- Frekuensi kunjungan
+
+**👨‍💼 Laporan Karyawan (Staff):**
+- Penjualan per kasir
+- Jumlah transaksi per kasir
+- Driver performance (🚚 deliveries count, avg time)
+
+**🚚 Laporan Pengiriman (Delivery):**
+- Delivery per hari (count & revenue)
+- Delivery per driver
+- Rata-rata waktu kirim
+
+**💸 Laporan Keuangan Sederhana:**
+- Profit & Loss sederhana (revenue − cost = gross profit)
+- Pajak terkumpul (PPN collected per period)
+- Diskon diberikan (total discounts)
+- Ringkasan kas (cash in register, open/close shift)
+
+**📤 Export Formats:**
+- PDF (with store logo)
+- CSV / Excel
+- Share via WhatsApp (daily summary)
+- Thermal print (end-of-day summary on receipt printer)
 
 #### [NEW] `src/app/(admin)/staff/page.jsx` — Staff Management
 - Staff list with roles and status
 - Add/edit staff with role assignment
-- Role-based access control:
-  - **Admin**: Full access (settings, reports, staff management)
-  - **Cashier**: POS checkout, order management
-  - **Kitchen**: Kitchen display, order status updates
-  - **Driver**: Delivery view, GPS tracking
+- Role-based access control (5 roles):
+  - **🔑 Super Admin**: Full access — store mode, outlet management, tax settings, staff roles, data reset. Created automatically during Setup Wizard.
+  - **👔 Admin**: Reports, inventory, customers, staff list (cannot change store mode, outlets, or tax)
+  - **💳 Kasir (Cashier)**: POS checkout, order management, customer lookup
+  - **🍳 Dapur (Kitchen)**: Kitchen display, order status updates (🍽️ Restaurant only)
+  - **🚚 Driver**: Delivery view, GPS tracking
 - PIN-based quick login (for shift changes at POS terminal)
+- Only Super Admin can assign/change roles
+
+**Role Permission Matrix**:
+
+| Feature | 🔑 Super Admin | 👔 Admin | 💳 Kasir | 🍳 Dapur | 🚚 Driver |
+|---|:---:|:---:|:---:|:---:|:---:|
+| Ganti kategori toko | ✅ | ❌ | ❌ | ❌ | ❌ |
+| Kelola outlet | ✅ | ❌ | ❌ | ❌ | ❌ |
+| Ubah tarif pajak | ✅ | ❌ | ❌ | ❌ | ❌ |
+| Kelola staff & roles | ✅ | ❌ | ❌ | ❌ | ❌ |
+| Hapus data / reset | ✅ | ❌ | ❌ | ❌ | ❌ |
+| Backup / restore | ✅ | ❌ | ❌ | ❌ | ❌ |
+| Lihat laporan | ✅ | ✅ | ❌ | ❌ | ❌ |
+| Kelola inventaris | ✅ | ✅ | ❌ | ❌ | ❌ |
+| **Kelola vendor** | ✅ | ✅ | ❌ | ❌ | ❌ |
+| **Buat & kelola PO** | ✅ | ✅ | ❌ | ❌ | ❌ |
+| **Terima barang (receiving)** | ✅ | ✅ | ❌ | ❌ | ❌ |
+| **Stock opname** | ✅ | ✅ | ❌ | ❌ | ❌ |
+| Kelola pelanggan | ✅ | ✅ | ✅ | ❌ | ❌ |
+| Checkout / POS | ✅ | ❌ | ✅ | ❌ | ❌ |
+| Kitchen Display | ✅ | ❌ | ❌ | ✅ | ❌ |
+| Delivery Board | ✅ | ✅ | ✅ | ❌ | ❌ |
+| Driver View | ❌ | ❌ | ❌ | ❌ | ✅ |
+| Printer & receipt settings | ✅ | ✅ | ❌ | ❌ | ❌ |
+| Theme & language | ✅ | ✅ | ✅ | ✅ | ✅ |
 
 #### [NEW] `src/app/(admin)/customers/page.jsx` — Customer Database
 - Customer list with search
@@ -398,16 +754,88 @@ Modifier: { id, name, price, group, isRequired }  // 🍽️ Restaurant only
 ### Phase 6: Settings & Configuration
 
 #### [NEW] `src/app/(admin)/settings/page.jsx` — Settings Page
-- **Kategori Toko**: Switch between 🛒 Retail and 🍽️ Restoran mode (per outlet)
-- **Business Info**: Store name, address, phone, logo
-- **Outlet Management**: Add/edit/switch outlets, set mode per outlet
-- **Tax Settings**: Rate, inclusive/exclusive toggle
-- **Receipt Settings**: Header, footer, custom text
-- **Printer Settings**: Connection type, test print
-- **Notification Settings**: Sound, desktop notifications
-- **Theme**: Light/Dark mode, accent color
-- **Language**: Bahasa Indonesia / English switch
-- **Backup/Restore**: Export/import data
+- **🔒 Super Admin Only**:
+  - Kategori Toko: Switch between 🛒 Retail and 🍽️ Restoran mode (per outlet)
+  - Outlet Management: Add/edit/switch outlets, set mode per outlet
+  - Tax Settings: Rate, inclusive/exclusive toggle
+  - Backup/Restore: Export/import data
+  - **🔧 Kelola Modul (Module Visibility)**: Show/hide modules per outlet
+- **👔 Admin + Super Admin**:
+  - Business Info: Store name, address, phone, logo
+  - Receipt Settings: Header, footer, custom text
+  - Printer Settings: Connection type, test print
+  - Notification Settings: Sound, desktop notifications
+- **🔓 All Roles**:
+  - Theme: Light/Dark mode, accent color
+  - Language: Bahasa Indonesia / English switch
+
+#### [NEW] Module Visibility Management (🔑 Super Admin Only)
+Super Admin can show/hide entire modules to simplify the UI for their business needs.
+Config is saved **per outlet** in Firestore.
+
+**Toggleable Modules:**
+
+| Module | Default (🛒 Retail) | Default (🍽️ Restoran) | What Happens When Hidden |
+|---|:---:|:---:|---|
+| 🚚 **Pengiriman (Delivery)** | ✅ On | ✅ On | Delivery menu, driver view, tracking removed |
+| 🏦 **Vendor / Supplier** | ✅ On | ✅ On | Vendor page hidden from sidebar |
+| 📝 **Pesanan Pembelian (PO)** | ✅ On | ✅ On | PO & receiving pages hidden |
+| 📋 **Stok Opname** | ✅ On | ✅ On | Stock count page hidden |
+| 👥 **Pelanggan & Loyalty** | ✅ On | ✅ On | Customer page hidden, loyalty disabled |
+| 🍳 **Dapur / KDS** | ❌ Off | ✅ On | Kitchen display & KOT printing hidden |
+| 🍽️ **Meja / Table** | ❌ Off | ✅ On | Table number input hidden from checkout |
+| 🌟 **Modifier / Add-on** | ❌ Off | ✅ On | Modifier picker hidden from checkout |
+| 📊 **Laporan Lanjutan** | ✅ On | ✅ On | Advanced reports hidden (keeps dashboard) |
+| 🔔 **Smart Reorder** | ✅ On | ✅ On | Auto-reorder suggestions disabled |
+
+**How it works:**
+```javascript
+// src/stores/settingsStore.js
+const moduleVisibility = {
+  delivery: true,
+  vendors: true,
+  purchaseOrders: true,
+  stockOpname: true,
+  customers: true,
+  kitchen: false,      // Auto-set by store mode
+  tables: false,       // Auto-set by store mode
+  modifiers: false,    // Auto-set by store mode
+  advancedReports: true,
+  smartReorder: true,
+};
+```
+
+**UI in Settings:**
+```
+┌─────────────────────────────────────────┐
+│  🔧 Kelola Modul                        │
+│                                         │
+│  Pilih modul yang aktif untuk outlet ini │
+│                                         │
+│  🚚 Pengiriman          [█████] ON     │
+│  🏦 Vendor / Supplier   [█████] ON     │
+│  📝 Pesanan Pembelian   [█████] ON     │
+│  📋 Stok Opname         [█████] ON     │
+│  👥 Pelanggan & Loyalty [█████] ON     │
+│  🍳 Dapur / KDS         [─────] OFF    │
+│  🍽️ Meja / Table        [─────] OFF    │
+│  🌟 Modifier / Add-on   [─────] OFF    │
+│  📊 Laporan Lanjutan    [█████] ON     │
+│  🔔 Smart Reorder       [█████] ON     │
+│                                         │
+│  ⚠️ Beberapa modul otomatis aktif        │
+│  berdasarkan kategori toko               │
+│                                         │
+│         [ Simpan Pengaturan ]            │
+└─────────────────────────────────────────┘
+```
+
+**Behavior:**
+- Hidden modules are **removed from sidebar** navigation
+- Hidden module pages return **redirect to /checkout** if accessed directly
+- When store mode changes (Retail → Restoran), restaurant modules auto-enable but Super Admin can still turn them off
+- **Checkout** and **Settings** cannot be hidden (always required)
+- Module visibility is stored in Firestore under `outlets/{outletId}/modules`
 
 ---
 
@@ -422,6 +850,7 @@ skokpos/
 │   └── sounds/                # Notification sounds
 ├── src/
 │   ├── app/
+│   │   ├── globals.css        # Tailwind base + CSS variables (light/dark)
 │   │   ├── layout.jsx         # Root layout with AppShell
 │   │   ├── page.jsx           # Landing → redirect to /checkout or /setup
 │   │   ├── setup/             # 🆕 First-time setup wizard
@@ -431,6 +860,9 @@ skokpos/
 │   │   │   └── kitchen/       # 🍽️ Kitchen Display System (restaurant only)
 │   │   ├── (admin)/
 │   │   │   ├── inventory/     # Inventory management
+│   │   │   ├── vendors/       # 🆕 Vendor/supplier management
+│   │   │   ├── purchase-orders/ # 🆕 Purchase orders + goods receiving
+│   │   │   ├── stock-opname/  # 🆕 Physical stock count
 │   │   │   ├── reports/       # Analytics dashboard
 │   │   │   ├── staff/         # Staff management
 │   │   │   ├── customers/     # Customer database
@@ -440,24 +872,31 @@ skokpos/
 │   │   └── track/
 │   │       └── [orderId]/     # Public tracking page
 │   ├── components/
+│   │   ├── ui/                # 🆕 Shadcn/ui components (Button, Dialog, Table, etc.)
 │   │   ├── layout/            # AppShell, Sidebar, Header
 │   │   ├── pos/               # POS-specific components
 │   │   ├── delivery/          # Delivery & tracking components
 │   │   ├── printer/           # Thermal print components
 │   │   ├── setup/             # 🆕 Setup wizard components
-│   │   ├── ui/                # Reusable UI primitives
 │   │   └── charts/            # Chart components
 │   ├── lib/
 │   │   ├── firebase/          # Firebase config & helpers
+│   │   ├── i18n/              # 🆕 Internationalization
+│   │   │   ├── config.js        #    Language config
+│   │   │   ├── id.json          #    🇮🇩 Bahasa Indonesia
+│   │   │   ├── en.json          #    🇬🇧 English
+│   │   │   ├── useTranslation.js #   React hook
+│   │   │   └── formatters.js    #    Number/date/currency formatters
 │   │   ├── printer/           # ESC/POS printing engine
 │   │   ├── tracking/          # GPS & delivery tracking
 │   │   ├── models/            # Data models & validation
 │   │   ├── storeMode.js       # 🆕 Store mode engine & feature flags
-│   │   ├── utils/             # Currency formatter, date helpers
+│   │   ├── utils.ts           # 🆕 cn() helper for Tailwind class merging
 │   │   └── hooks/             # Custom React hooks
 │   ├── stores/                # Zustand state stores
-│   └── styles/
-│       └── globals.css        # Complete design system
+│   └── styles/                # Additional custom styles (if needed)
+├── components.json            # 🆕 Shadcn/ui configuration
+├── tailwind.config.ts         # 🆕 Tailwind CSS configuration (if needed for v4)
 ├── .env.local                 # Firebase config (gitignored)
 ├── next.config.js             # Next.js + PWA config
 └── package.json
@@ -473,7 +912,7 @@ skokpos/
 | **Phase 2** | Product catalog, checkout, cart, payments, **mode-aware UI** | Core POS |
 | **Phase 3** | Thermal printing (ESC/POS, receipts, **mode-aware KOT**) | Printing |
 | **Phase 4** | Delivery board, live tracking, driver app, customer tracking | Delivery |
-| **Phase 5** | Inventory, reports, staff, customers, **KDS (restaurant)** | Management |
+| **Phase 5** | Inventory, **vendors, PO, goods receiving, stock opname**, reports, staff, customers, **KDS (restaurant)** | Management |
 | **Phase 6** | Settings, **store mode switch**, PWA optimization, final polish | Polish |
 
 > [!TIP]
