@@ -5,7 +5,7 @@
 
 | | |
 |---|---|
-| **Versi Dokumen** | 2.1 |
+| **Versi Dokumen** | 2.2 |
 | **Tanggal** | 3 Juni 2026 |
 | **Disiapkan Untuk** | Susilogiono |
 | **Nama Proyek** | SkokPOS |
@@ -231,6 +231,17 @@ Kembali:            Rp  13.312
 | 4.9 | Kalkulator ETA | Estimasi waktu tiba berbasis jarak |
 | 4.10 | Simulasi Demo | Simulasi pergerakan GPS driver untuk testing/demo tanpa driver asli |
 | 4.11 | Timeline Pengiriman | Riwayat perubahan status dengan timestamp untuk setiap pesanan |
+| 4.12 | **Ongkos Kirim (Delivery Fee)** | 3 model: gratis, flat rate (Rp 10.000), per-km (Rp 3.000/km min Rp 5.000), zona-based. Gratis ongkir jika order ≥ threshold (konfigurabel). Ongkir tampil di struk |
+| 4.13 | **Alamat Pelanggan & Pin Peta** | Multiple alamat tersimpan per pelanggan, pin lokasi di peta (Leaflet), label (Rumah/Kantor/Lainnya), catatan alamat, autocomplete |
+| 4.14 | **Cash on Delivery (COD)** | Tag COD per order, driver input uang diterima, rekonsiliasi COD admin, setor kas driver → admin konfirmasi, laporan saldo COD per driver |
+| 4.15 | **Notifikasi WhatsApp ke Pelanggan** | Auto-send via wa.me: pesanan diterima, driver ditugaskan, sedang diantar (+ link tracking), terkirim. Template konfigurabel |
+| 4.16 | **Bukti Pengiriman (Proof of Delivery)** | Driver ambil foto serah terima, upload ke Firebase Storage, tampil di admin detail order, catatan driver ("dititipkan ke satpam") |
+| 4.17 | **Status Online/Offline Driver** | Toggle online/offline, dashboard lihat driver available, auto-offline setelah 30 menit tidak aktif, count "3 driver aktif" di header |
+| 4.18 | **Multi-Order per Trip (Batch)** | Assign 2-5 order ke 1 driver, urutkan stop by jarak, peta multi-stop, status independen per order |
+| 4.19 | **Gagal Kirim (Failed Delivery)** | Alasan gagal (tidak ada orang, alamat salah, menolak), retry/jadwalkan ulang, return ke toko, proses refund, log percobaan |
+| 4.20 | **Jadwal Pengiriman** | Pilih "Sekarang" atau slot waktu (10:00-12:00), scheduled orders muncul di board pada waktu ditentukan, reminder driver 15 menit sebelum |
+| 4.21 | **Auto-Assign Driver** | Auto-assign ke driver online terdekat, least-busy fallback, manual override admin, notifikasi ke driver |
+| 4.22 | **Radius & Zona Pengiriman** | Set radius maks (contoh: 15 km), gambar zona di peta, penolakan otomatis jika di luar area |
 
 **Kriteria Penerimaan**:
 - Marker driver bergerak halus di peta (animasi interpolasi)
@@ -238,6 +249,14 @@ Kembali:            Rp  13.312
 - Perubahan status tercermin di semua tampilan dalam 2 detik
 - ETA diperbarui saat driver bergerak
 - Simulasi driver mengikuti rute path yang realistis
+- Ongkos kirim dihitung dengan benar dan tampil di struk
+- Alamat pelanggan tersimpan dan bisa di-pin di peta
+- COD tracking menampilkan saldo uang yang harus disetor driver
+- Notifikasi WhatsApp terkirim otomatis pada setiap perubahan status
+- Foto bukti pengiriman tersimpan dan bisa dilihat di admin
+- Driver bisa toggle online/offline
+- Multi-order per trip menampilkan semua stop di peta
+- Gagal kirim di-handle dengan alasan dan opsi retry/return
 
 ---
 
@@ -394,6 +413,9 @@ Suite laporan komprehensif dengan 8 kategori:
 | Delivery Board | ✅ | ✅ | ✅ | ❌ | ❌ |
 | Driver View | ❌ | ❌ | ❌ | ❌ | ✅ |
 | Printer & struk | ✅ | ✅ | ❌ | ❌ | ❌ |
+| Atur ongkir & zona | ✅ | ✅ | ❌ | ❌ | ❌ |
+| Lihat bukti kirim | ✅ | ✅ | ✅ | ❌ | ❌ |
+| Setor kas COD | ❌ | ❌ | ❌ | ❌ | ✅ |
 | Tema & bahasa | ✅ | ✅ | ✅ | ✅ | ✅ |
 
 > [!NOTE]
@@ -464,6 +486,7 @@ Suite laporan komprehensif dengan 8 kategori:
 | 🔔 Smart Reorder | ✅ | ✅ | Saran restock otomatis dinonaktifkan |
 | 💰 Bon / Hutang | ✅ | ✅ | Fitur kredit penjualan dinonaktifkan |
 | 📋 Activity Log | ✅ | ✅ | Log audit tersembunyi |
+| 🗺️ Zona Pengiriman | ✅ | ✅ | Pengaturan zona & radius tersembunyi |
 
 **Kriteria Penerimaan**:
 - Semua pengaturan tersimpan antar sesi
@@ -560,7 +583,7 @@ erDiagram
 Store:         { id, name, address, phone, logo, storeMode, taxRate, taxInclusive, language, createdAt }
 Outlet:        { id, storeId, name, address, storeMode, modules, isActive }
 Product:       { id, name, sku, barcode, categoryId, price, cost, wholesalePrice, wholesaleMinQty, unit, soldByWeight, expiryDate, image, variants[], modifiers[], isActive, stock, minStock, outletId, vendorId }
-Order:         { id, orderNumber, items[], subtotal, discount, tax, total, paymentMethod, status, cashierId, customerId, outletId, orderType, tableNumber, shiftId, isCredit, createdAt }
+Order:         { id, orderNumber, items[], subtotal, discount, tax, total, deliveryFee, paymentMethod, status, cashierId, customerId, outletId, orderType, tableNumber, shiftId, isCredit, isCOD, deliveryAddress, deliveryNotes, createdAt }
 Category:      { id, name, icon, color, sortOrder }
 Modifier:      { id, name, price, group, isRequired }
 Vendor:        { id, name, contactPerson, phone, email, address, notes, products[], isActive, outletId, createdAt }
@@ -571,7 +594,8 @@ Shift:         { id, outletId, cashierId, startingCash, actualCash, expectedCash
 Return:        { id, orderId, items[], refundAmount, refundMethod, reason, approvedBy, createdBy, createdAt }
 Credit:        { id, customerId, orderId, amount, paidAmount, remainingAmount, status, dueDate, outletId, createdAt }
 ActivityLog:   { id, userId, action, target, details, outletId, timestamp }
-Customer:      { id, name, phone, email, tier, points, totalSpent, creditLimit, outletId, createdAt }
+Customer:      { id, name, phone, email, tier, points, totalSpent, creditLimit, addresses[], outletId, createdAt }
+DeliveryAddress: { id, customerId, label, address, lat, lng, notes }
 Staff:         { id, name, phone, email, role, pin, isActive, outletId, createdAt }
 ```
 
@@ -608,10 +632,10 @@ Staff:         { id, name, phone, email, role, pin, isActive, outletId, createdA
 | Fase 1 | Fondasi, Sistem Desain & Setup Wizard | 2-3 hari |
 | Fase 2 | POS Inti, Checkout, **Shift, Retur/Void, Bon/Hutang, Multi-Price, Open Price, Timbangan** | 4-6 hari |
 | Fase 3 | Cetak Struk Thermal, **Struk WA, Label Barcode** | 2-3 hari |
-| Fase 4 | Pengiriman & Pelacakan Live | 2-3 hari |
+| Fase 4 | Pengiriman & Pelacakan Live, **Ongkir, COD, WhatsApp, Proof of Delivery, Auto-Assign, Zona** | 3-5 hari |
 | Fase 5 | Inventaris, **Kadaluarsa**, Vendor, PO, Stok Opname, **Activity Log, Laporan Otomatis**, Karyawan, Pelanggan, KDS | 6-8 hari |
 | Fase 6 | Pengaturan, Kelola Modul & Polish | 2-3 hari |
-| | **Total Estimasi** | **18-26 hari** |
+| | **Total Estimasi** | **19-28 hari** |
 
 > [!NOTE]
 > Estimasi timeline mengasumsikan sesi pengembangan terfokus. Durasi aktual dapat bervariasi berdasarkan siklus feedback, perubahan requirement, dan testing.
@@ -648,6 +672,10 @@ Proyek dianggap selesai ketika:
 22. ✅ Produk kadaluarsa mendapat alert dan ditandai dengan kode warna
 23. ✅ Activity log mencatat semua perubahan secara immutable
 24. ✅ Laporan otomatis terkirim via WhatsApp sesuai jadwal
+25. ✅ Ongkos kirim dihitung dan tampil di struk
+26. ✅ COD tracking dan rekonsiliasi kas driver berfungsi
+27. ✅ Notifikasi WhatsApp terkirim otomatis ke pelanggan
+28. ✅ Bukti pengiriman (foto) tersimpan dan bisa dilihat
 
 ### 7.2 Tanda Tangan Persetujuan
 
@@ -669,5 +697,5 @@ Setiap perubahan terhadap ruang lingkup yang didefinisikan dalam SOW ini harus d
 ---
 
 *Dokumen dibuat pada 3 Juni 2026*
-*SkokPOS v2.1 — Kerangka Acuan Kerja / Statement of Work*
+*SkokPOS v2.2 — Kerangka Acuan Kerja / Statement of Work*
 

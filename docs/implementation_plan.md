@@ -491,7 +491,7 @@ The heart of the app — split-screen layout:
 Store:         { id, name, address, phone, logo, storeMode, taxRate, taxInclusive, language, createdAt }
 Outlet:        { id, storeId, name, address, storeMode, modules, isActive }
 Product:       { id, name, sku, barcode, categoryId, price, cost, wholesalePrice, wholesaleMinQty, unit, soldByWeight, expiryDate, image, variants[], modifiers[], isActive, stock, minStock, outletId, vendorId }
-Order:         { id, orderNumber, items[], subtotal, discount, tax, total, paymentMethod, status, cashierId, customerId, outletId, orderType, tableNumber, shiftId, isCredit, createdAt }
+Order:         { id, orderNumber, items[], subtotal, discount, tax, deliveryFee, total, paymentMethod, status, cashierId, customerId, outletId, orderType, tableNumber, shiftId, isCredit, isCOD, deliveryAddressId, deliveryNotes, scheduledTime, createdAt }
 Category:      { id, name, icon, color, sortOrder }
 Modifier:      { id, name, price, group, isRequired }  // 🍽️ Restaurant only
 Vendor:        { id, name, contactPerson, phone, email, address, notes, products[], isActive, outletId, createdAt }
@@ -502,6 +502,9 @@ Shift:         { id, outletId, cashierId, startingCash, actualCash, expectedCash
 Return:        { id, orderId, items[], refundAmount, refundMethod, reason, approvedBy, createdBy, createdAt }
 Credit:        { id, customerId, orderId, amount, paidAmount, remainingAmount, status, dueDate, outletId, createdAt }
 ActivityLog:   { id, userId, action, target, details, outletId, timestamp }
+DeliveryAddress: { id, customerId, label, address, lat, lng, notes }
+Delivery:      { id, orderId, driverId, status, attempts, codAmount, codCollected, codSettled, proofPhotoUrl, proofNotes, failReason, zoneId, fee, assignedAt, pickedUpAt, deliveredAt, failedAt }
+DeliveryZone:  { id, outletId, name, type, coordinates, fee, isActive }
 ```
 
 ---
@@ -601,13 +604,23 @@ ActivityLog:   { id, userId, action, target, details, outletId, timestamp }
 - Assign/reassign drivers to orders
 - Real-time map showing all active drivers
 - ETA calculations
+- **🆕 COD badge** on order cards that are Cash on Delivery
+- **🆕 Driver availability counter** in header ("3 driver aktif")
+- **🆕 Scheduled orders** section showing upcoming deliveries
 
 #### [NEW] `src/app/(pos)/delivery/components/`
 - `DeliveryBoard.jsx` — Kanban columns with order cards
-- `OrderCard.jsx` — Order summary card with status badge
-- `DriverAssignment.jsx` — Driver selection dropdown
-- `LiveMap.jsx` — Leaflet map with driver markers and delivery routes
+- `OrderCard.jsx` — Order summary card with status badge + COD tag
+- `DriverAssignment.jsx` — Driver selection dropdown (shows only online drivers)
+- `LiveMap.jsx` — Leaflet map with driver markers, delivery routes, and **zone overlay**
 - `DeliveryTimeline.jsx` — Status history timeline
+- `DeliveryFeeCalculator.jsx` — **🆕** Auto-calculate ongkir based on distance/zone
+- `AddressPicker.jsx` — **🆕** Map pin + address autocomplete + saved addresses
+- `BatchAssignment.jsx` — **🆕** Assign multiple orders to one driver trip
+- `ScheduleSlotPicker.jsx` — **🆕** Time slot selector for scheduled deliveries
+- `FailedDeliveryModal.jsx` — **🆕** Failed delivery reason + retry/return options
+- `ProofOfDelivery.jsx` — **🆕** Photo capture + notes for delivery confirmation
+- `CODReconciliation.jsx` — **🆕** Driver cash collection tracking & settlement
 
 #### [NEW] `src/app/track/[orderId]/page.jsx` — Customer Tracking Page
 - Public page (no auth required)
@@ -616,18 +629,117 @@ ActivityLog:   { id, userId, action, target, details, outletId, timestamp }
 - ETA with progress bar
 - Delivery person name and contact
 - Auto-refresh via Realtime Database listener
+- **🆕 Multi-stop indicator** if driver has multiple deliveries
 
 #### [NEW] `src/app/(driver)/driver/page.jsx` — Driver Mobile View
 - Optimized for phone screens
+- **🆕 Online/Offline toggle** at top of screen
 - Current delivery with navigation
+- **🆕 Multi-stop trip view** with all delivery points
 - Order list queue
 - Status update buttons (one-tap: "Picked Up", "En Route", "Delivered")
+- **🆕 "Gagal Kirim" button** with reason selection
+- **🆕 Photo capture** for proof of delivery
+- **🆕 COD input** — input cash received from customer
 - GPS broadcasting (sends location every 5 seconds to Realtime DB)
 
 #### [NEW] `src/lib/tracking/`
 - `gpsTracker.js` — Geolocation API wrapper with battery-efficient polling
 - `locationSync.js` — Push GPS coordinates to Firebase Realtime DB
 - `etaCalculator.js` — Simple distance-based ETA estimation
+- `deliveryFee.js` — **🆕** Fee calculation engine (flat/per-km/zone-based)
+- `zoneManager.js` — **🆕** Delivery zone polygon manager + radius check
+- `autoAssign.js` — **🆕** Auto-assign nearest available online driver
+
+#### [NEW] Ongkos Kirim (Delivery Fee) System
+3 models, configurable per outlet:
+
+| Model | Contoh | Cara Kerja |
+|---|---|---|
+| **Gratis** | Rp 0 | Semua pengiriman gratis |
+| **Flat Rate** | Rp 10.000 | Ongkir tetap untuk semua jarak |
+| **Per Kilometer** | Rp 3.000/km (min Rp 5.000) | Hitung jarak → kalikan tarif |
+| **Zona** | Zona 1: Rp 5.000, Zona 2: Rp 10.000, Zona 3: Rp 20.000 | Berdasarkan zona pengiriman |
+
+- **Free delivery threshold**: Gratis ongkir jika order ≥ Rp X (konfigurabel)
+- Ongkir tampil sebagai line item di struk
+- Ongkir masuk ke laporan keuangan
+
+#### [NEW] Customer Address & Map Pin
+- Multiple alamat tersimpan per pelanggan (Rumah, Kantor, Lainnya)
+- Pin lokasi di peta (Leaflet map tap)
+- Catatan alamat: "Lantai 3, pintu kiri", "Depan minimarket"
+- Autocomplete pencarian alamat
+- Last-used address auto-selected
+
+#### [NEW] Cash on Delivery (COD) Tracking
+- Order ditandai sebagai COD di delivery board
+- Driver input jumlah uang diterima dari pelanggan
+- Admin lihat total uang COD yang harus disetor per driver
+- Setor kas: driver setor → admin konfirmasi → status lunas
+- Laporan saldo COD outstanding per driver
+- Alert: driver dengan saldo COD tinggi yang belum setor
+
+#### [NEW] WhatsApp Notifications to Customer
+Auto-send via wa.me API at each status change:
+
+| Status | Template Pesan |
+|---|---|
+| ✅ Diterima | "Pesanan #INV-xxx sudah diterima, sedang diproses 👨‍🍳" |
+| 🚚 Ditugaskan | "Driver [nama] sedang menuju toko untuk mengambil pesanan Anda" |
+| 📦 Diantar | "Pesanan sedang dalam perjalanan! Lacak di: [link tracking]" |
+| ✅ Terkirim | "Pesanan sudah sampai! Terima kasih 🙏" |
+| ❌ Gagal | "Maaf, pengiriman gagal. Tim kami akan menghubungi Anda" |
+
+#### [NEW] Proof of Delivery (POD)
+- Driver capture photo saat serah terima barang
+- Upload ke Firebase Cloud Storage, linked ke order
+- Admin bisa lihat foto di detail order
+- Catatan driver: "Dititipkan ke satpam", "Diterima langsung"
+- Mencegah dispute "belum terima"
+
+#### [NEW] Driver Online/Offline Status
+- Toggle online/offline di driver mobile view
+- Dashboard admin menampilkan driver available
+- Auto-offline jika tidak ada aktivitas 30 menit
+- Count "X driver aktif" di delivery board header
+- Only online drivers shown in assignment dropdown
+
+#### [NEW] Multi-Order per Trip (Batch Delivery)
+- Assign 2-5 order ke 1 driver dalam 1 trip
+- Urutkan stop berdasarkan jarak (nearest first algorithm)
+- Peta multi-stop menampilkan semua titik delivery
+- Status independen per order (satu delivered, lainnya masih en route)
+- Driver view: numbered stop list with navigation
+
+#### [NEW] Failed Delivery Handling
+- Alasan gagal: pelanggan tidak ada, alamat salah, menolak, dll.
+- Opsi setelah gagal:
+  - **Retry**: Jadwalkan ulang pengiriman
+  - **Return**: Kembalikan ke toko (stok kembali jika COD)
+  - **Refund**: Proses refund jika sudah bayar
+- Log semua percobaan pengiriman
+- Counter: attempt 1/3
+
+#### [NEW] Scheduled Delivery
+- Saat checkout, pilih: "Kirim Sekarang" atau slot waktu (10:00-12:00, 12:00-14:00, dll.)
+- Scheduled orders muncul di board pada waktu yang ditentukan
+- Reminder notifikasi driver 15 menit sebelum jadwal
+- Calendar view untuk scheduled deliveries
+
+#### [NEW] Auto-Assign Driver
+- Auto-assign ke driver online terdekat (berdasarkan GPS)
+- Jika jarak sama, assign ke driver dengan order paling sedikit (least-busy)
+- Manual override oleh admin kapan saja
+- Notifikasi push ke driver saat order baru ditugaskan
+- Timeout: jika driver tidak respond dalam 2 menit, auto-assign ke driver berikutnya
+
+#### [NEW] Delivery Zone & Radius
+- Set radius maksimum pengiriman per outlet (contoh: 15 km)
+- Gambar zona pengiriman di peta (polygon / circle)
+- Penolakan otomatis: "Maaf, alamat di luar area pengiriman kami"
+- Zona terkait ongkir: Zona 1 = Rp X, Zona 2 = Rp Y
+- Visual overlay di admin delivery map
 
 ---
 
@@ -1025,9 +1137,9 @@ skokpos/
 | Phase | Scope | Est. Effort |
 |---|---|---|
 | **Phase 1** | Project setup, design system, app shell, **setup wizard**, i18n | Foundation |
-| **Phase 2** | Product catalog, checkout, cart, payments, **shift management, retur/void, bon/hutang, multi-price, open price, weight-based** | Core POS |
+| **Phase 2** | Product catalog, checkout, cart, payments, **shift, retur/void, bon/hutang, multi-price, open price, weight-based** | Core POS |
 | **Phase 3** | Thermal printing, receipts, **WA digital receipt, barcode label printing**, KOT | Printing |
-| **Phase 4** | Delivery board, live tracking, driver app, customer tracking | Delivery |
+| **Phase 4** | Delivery board, live tracking, driver app, **ongkir, COD, WA notif, POD, zones, batch, auto-assign** | Delivery |
 | **Phase 5** | Inventory, **expiry tracking**, vendors, PO, stock opname, **activity log, scheduled reports**, staff, customers, KDS | Management |
 | **Phase 6** | Settings, **module visibility**, PWA optimization, final polish | Polish |
 
@@ -1060,6 +1172,14 @@ skokpos/
 - **Activity Log**: Perform various actions → verify all logged with correct details
 - **Scheduled Reports**: Configure daily report → verify WhatsApp delivery at set time
 - **Delivery Tracking**: Create delivery order → open driver view → start tracking → verify live map updates
+- **Ongkos Kirim**: Set flat rate → create delivery order → verify fee in cart and receipt
+- **COD Tracking**: Create COD order → driver marks delivered + inputs cash → admin reconciles
+- **WA Notification**: Create delivery → verify WhatsApp messages sent at each status change
+- **Proof of Delivery**: Driver delivers → takes photo → verify photo visible in admin
+- **Driver Status**: Driver toggles online → appears in assignment list → toggles offline → disappears
+- **Multi-Order Trip**: Assign 3 orders to 1 driver → verify all stops on map → deliver one by one
+- **Failed Delivery**: Mark delivery as failed → retry → verify attempt counter
+- **Delivery Zone**: Draw zone on map → set fee → order outside zone → verify rejection
 - **Offline Mode**: Disconnect WiFi → process sale → reconnect → verify data syncs to Firestore
 - **Responsive Design**: Test on tablet (POS), phone (driver), desktop (admin)
 - **PWA Install**: Install on Android via Chrome → verify works offline
@@ -1099,3 +1219,14 @@ skokpos/
 28. ✅ **Vendor & Purchase Orders**: Full procurement cycle
 29. ✅ **Smart Reorder**: Auto-suggest PO when stock is low
 30. ✅ **Stock Opname**: Physical count with system reconciliation
+31. ✅ **Delivery Fee / Ongkir**: 3 models (gratis/flat/per-km/zona)
+32. ✅ **Customer Address & Map Pin**: Saved addresses with GPS coordinates
+33. ✅ **COD Tracking**: Cash collection & driver reconciliation
+34. ✅ **WhatsApp Delivery Notifications**: Auto-notify customer at each status
+35. ✅ **Proof of Delivery**: Photo confirmation on delivery
+36. ✅ **Driver Online/Offline**: Availability status toggle
+37. ✅ **Multi-Order per Trip**: Batch delivery with route optimization
+38. ✅ **Failed Delivery Handling**: Retry, return, refund workflow
+39. ✅ **Scheduled Delivery**: Time slot selection for future delivery
+40. ✅ **Auto-Assign Driver**: Nearest online driver auto-assignment
+41. ✅ **Delivery Zones**: Configurable radius & polygon zones
